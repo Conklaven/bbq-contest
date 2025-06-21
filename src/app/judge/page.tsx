@@ -85,6 +85,8 @@ export default function JudgeDashboard() {
       // More comprehensive rear camera detection
       const rearCamera = videoDevices.find(device => {
         const label = device.label.toLowerCase();
+        console.log('Checking device:', { label, deviceId: device.deviceId });
+
         return (
           label.includes('back') ||
           label.includes('rear') ||
@@ -98,17 +100,44 @@ export default function JudgeDashboard() {
           // Check for device ID patterns that might indicate rear camera
           device.deviceId.includes('back') ||
           device.deviceId.includes('rear') ||
-          device.deviceId.includes('1') // Often rear camera has ID ending in 1
+          device.deviceId.includes('1') || // Often rear camera has ID ending in 1
+          // Additional patterns for mobile devices
+          device.deviceId.includes('2') || // Sometimes rear camera is device 2
+          device.deviceId.includes('rear') ||
+          device.deviceId.includes('back')
         );
       });
+
+      // Detect if first camera is likely front camera
+      const firstCamera = videoDevices[0];
+      const isFirstCameraFront =
+        firstCamera &&
+        (firstCamera.label.toLowerCase().includes('front') ||
+          firstCamera.label.toLowerCase().includes('user') ||
+          firstCamera.label.toLowerCase().includes('selfie') ||
+          firstCamera.deviceId.includes('front') ||
+          firstCamera.deviceId.includes('user'));
 
       // If no rear camera found, try to find the second camera (often the rear camera)
       const fallbackRearCamera =
         !rearCamera && videoDevices.length > 1 ? videoDevices[1] : null;
 
-      // Priority: stored camera > rear camera > fallback > first camera
+      // Smart fallback: if first camera is clearly front camera and we have multiple cameras, prefer second
+      const smartFallback =
+        !rearCamera &&
+        !fallbackRearCamera &&
+        isFirstCameraFront &&
+        videoDevices.length > 1
+          ? videoDevices[1]
+          : null;
+
+      // Priority: stored camera > rear camera > smart fallback > fallback > first camera
       const preferredCamera =
-        storedCamera || rearCamera || fallbackRearCamera || videoDevices[0];
+        storedCamera ||
+        rearCamera ||
+        smartFallback ||
+        fallbackRearCamera ||
+        videoDevices[0];
 
       setSelectedCamera(preferredCamera);
 
@@ -117,13 +146,16 @@ export default function JudgeDashboard() {
         storeCameraId(preferredCamera.deviceId);
       }
 
-      console.log('Selected camera:', {
-        deviceId: preferredCamera?.deviceId,
-        label: preferredCamera?.label,
-        isStored: !!storedCamera,
-        isRear: !!rearCamera,
-        isFallback: !!fallbackRearCamera,
+      console.log('Camera selection results:', {
         totalDevices: videoDevices.length,
+        storedCamera: storedCamera?.label,
+        rearCamera: rearCamera?.label,
+        isFirstCameraFront,
+        smartFallback: smartFallback?.label,
+        fallbackRearCamera: fallbackRearCamera?.label,
+        selectedCamera: preferredCamera?.label,
+        deviceIds: videoDevices.map(d => d.deviceId),
+        labels: videoDevices.map(d => d.label),
       });
 
       // Small delay to ensure DOM is ready
@@ -145,6 +177,7 @@ export default function JudgeDashboard() {
                   height: { ideal: 720 },
                 }
               : {
+                  // If no specific camera detected, try to use back camera via facingMode
                   facingMode: { ideal: 'environment' },
                   width: { ideal: 1280 },
                   height: { ideal: 720 },
