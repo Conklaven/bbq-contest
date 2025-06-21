@@ -14,6 +14,12 @@ export default function JudgeDashboard() {
   const [isInitializing, setIsInitializing] = useState(false);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [error, setError] = useState<string>('');
+  const [availableCameras, setAvailableCameras] = useState<MediaDeviceInfo[]>(
+    []
+  );
+  const [selectedCamera, setSelectedCamera] = useState<MediaDeviceInfo | null>(
+    null
+  );
 
   // Cleanup scanner
   const cleanupScanner = () => {
@@ -44,23 +50,61 @@ export default function JudgeDashboard() {
         device => device.kind === 'videoinput'
       );
 
-      // Find rear camera (usually has "back", "rear", or "environment" in the label)
-      const rearCamera = videoDevices.find(
-        device =>
-          device.label.toLowerCase().includes('back') ||
-          device.label.toLowerCase().includes('rear') ||
-          device.label.toLowerCase().includes('environment') ||
-          device.label.toLowerCase().includes('external')
+      setAvailableCameras(videoDevices);
+
+      console.log(
+        'Available video devices:',
+        videoDevices.map(d => ({
+          deviceId: d.deviceId,
+          label: d.label,
+          groupId: d.groupId,
+        }))
       );
 
-      // Use rear camera if available, otherwise use first available camera
-      const preferredCamera = rearCamera || videoDevices[0];
+      // More comprehensive rear camera detection
+      const rearCamera = videoDevices.find(device => {
+        const label = device.label.toLowerCase();
+        return (
+          label.includes('back') ||
+          label.includes('rear') ||
+          label.includes('environment') ||
+          label.includes('external') ||
+          label.includes('outdoor') ||
+          label.includes('world') ||
+          // Some devices use different naming conventions
+          label.includes('main') ||
+          label.includes('primary') ||
+          // Check for device ID patterns that might indicate rear camera
+          device.deviceId.includes('back') ||
+          device.deviceId.includes('rear') ||
+          device.deviceId.includes('1') // Often rear camera has ID ending in 1
+        );
+      });
+
+      // If no rear camera found, try to find the second camera (often the rear camera)
+      const fallbackRearCamera =
+        !rearCamera && videoDevices.length > 1 ? videoDevices[1] : null;
+
+      const preferredCamera =
+        rearCamera || fallbackRearCamera || videoDevices[0];
+      setSelectedCamera(preferredCamera);
+
+      console.log('Selected camera:', {
+        deviceId: preferredCamera?.deviceId,
+        label: preferredCamera?.label,
+        isRear: !!rearCamera,
+        isFallback: !!fallbackRearCamera,
+        totalDevices: videoDevices.length,
+      });
 
       // Request camera permission with preferred camera
       const constraints = {
         video: preferredCamera
-          ? { deviceId: { exact: preferredCamera.deviceId } }
-          : true,
+          ? {
+              deviceId: { exact: preferredCamera.deviceId },
+              facingMode: { ideal: 'environment' }, // Prefer back camera
+            }
+          : { facingMode: { ideal: 'environment' } },
       };
 
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
@@ -78,12 +122,19 @@ export default function JudgeDashboard() {
             qrbox: { width: 250, height: 250 },
             aspectRatio: 1.0,
             supportedScanTypes: [0], // QR_CODE only
-            // Configure camera selection
-            ...(preferredCamera && {
-              videoConstraints: {
-                deviceId: { exact: preferredCamera.deviceId },
-              },
-            }),
+            // Configure camera selection with multiple fallbacks
+            videoConstraints: preferredCamera
+              ? {
+                  deviceId: { exact: preferredCamera.deviceId },
+                  facingMode: { ideal: 'environment' },
+                  width: { ideal: 1280 },
+                  height: { ideal: 720 },
+                }
+              : {
+                  facingMode: { ideal: 'environment' },
+                  width: { ideal: 1280 },
+                  height: { ideal: 720 },
+                },
           },
           false
         );
@@ -160,6 +211,19 @@ export default function JudgeDashboard() {
     } finally {
       setIsInitializing(false);
     }
+  };
+
+  // Switch camera function
+  const switchCamera = async (camera: MediaDeviceInfo) => {
+    if (isScanning || isInitializing) return;
+
+    setSelectedCamera(camera);
+    cleanupScanner();
+
+    // Small delay before reinitializing
+    setTimeout(() => {
+      initializeScanner();
+    }, 500);
   };
 
   // Initialize scanner when user is authenticated
@@ -288,6 +352,35 @@ export default function JudgeDashboard() {
               className="w-full max-w-md"
             ></div>
           </div>
+
+          {/* Camera Selection */}
+          {availableCameras.length > 1 && (
+            <div className="mb-6">
+              <h3 className="text-sm font-medium text-gray-700 mb-2 text-center">
+                Camera Selection
+              </h3>
+              <div className="flex justify-center gap-2">
+                {availableCameras.map((camera, index) => (
+                  <button
+                    key={camera.deviceId}
+                    onClick={() => switchCamera(camera)}
+                    disabled={isScanning || isInitializing}
+                    className={`px-3 py-1 text-xs rounded-md transition ${
+                      selectedCamera?.deviceId === camera.deviceId
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    } ${
+                      isScanning || isInitializing
+                        ? 'opacity-50 cursor-not-allowed'
+                        : ''
+                    }`}
+                  >
+                    {camera.label || `Camera ${index + 1}`}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Loading State */}
           {isInitializing && (
