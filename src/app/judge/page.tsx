@@ -38,8 +38,32 @@ export default function JudgeDashboard() {
     setError('');
 
     try {
-      // Check camera permission first
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      // Get available cameras and prefer rear camera on mobile
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videoDevices = devices.filter(
+        device => device.kind === 'videoinput'
+      );
+
+      // Find rear camera (usually has "back", "rear", or "environment" in the label)
+      const rearCamera = videoDevices.find(
+        device =>
+          device.label.toLowerCase().includes('back') ||
+          device.label.toLowerCase().includes('rear') ||
+          device.label.toLowerCase().includes('environment') ||
+          device.label.toLowerCase().includes('external')
+      );
+
+      // Use rear camera if available, otherwise use first available camera
+      const preferredCamera = rearCamera || videoDevices[0];
+
+      // Request camera permission with preferred camera
+      const constraints = {
+        video: preferredCamera
+          ? { deviceId: { exact: preferredCamera.deviceId } }
+          : true,
+      };
+
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
       stream.getTracks().forEach(track => track.stop()); // Stop the test stream
       setHasPermission(true);
 
@@ -54,6 +78,12 @@ export default function JudgeDashboard() {
             qrbox: { width: 250, height: 250 },
             aspectRatio: 1.0,
             supportedScanTypes: [0], // QR_CODE only
+            // Configure camera selection
+            ...(preferredCamera && {
+              videoConstraints: {
+                deviceId: { exact: preferredCamera.deviceId },
+              },
+            }),
           },
           false
         );
@@ -139,7 +169,8 @@ export default function JudgeDashboard() {
       return;
     }
 
-    if (user && !isScanning && !scannerRef.current) {
+    if (user && !isScanning && !scannerRef.current && hasPermission === null) {
+      // Auto-initialize scanner when user is authenticated
       initializeScanner();
     }
 
@@ -149,15 +180,19 @@ export default function JudgeDashboard() {
     };
   }, [user, loading]);
 
-  // Restart scanner
-  const restartScanner = () => {
-    cleanupScanner();
-    setError('');
-    setHasPermission(null);
-    setTimeout(() => {
-      initializeScanner();
-    }, 500);
-  };
+  // Auto-retry initialization if permission is granted but scanner failed
+  useEffect(() => {
+    if (
+      hasPermission === true &&
+      !isScanning &&
+      !scannerRef.current &&
+      !isInitializing
+    ) {
+      setTimeout(() => {
+        initializeScanner();
+      }, 1000);
+    }
+  }, [hasPermission, isScanning, isInitializing]);
 
   if (loading) {
     return (
@@ -221,7 +256,7 @@ export default function JudgeDashboard() {
               </h3>
               <p className="text-red-800 text-sm mb-4">{error}</p>
               <button
-                onClick={restartScanner}
+                onClick={initializeScanner}
                 className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition"
               >
                 Try Again
@@ -237,7 +272,7 @@ export default function JudgeDashboard() {
               </h3>
               <p className="text-yellow-800 text-sm mb-4">{error}</p>
               <button
-                onClick={restartScanner}
+                onClick={initializeScanner}
                 className="bg-yellow-600 text-white px-4 py-2 rounded-md hover:bg-yellow-700 transition"
               >
                 Restart Scanner
@@ -277,18 +312,6 @@ export default function JudgeDashboard() {
               </li>
             </ul>
           </div>
-
-          {/* Manual restart button */}
-          {!isScanning && !isInitializing && (
-            <div className="text-center mt-6">
-              <button
-                onClick={restartScanner}
-                className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition"
-              >
-                Restart Scanner
-              </button>
-            </div>
-          )}
         </div>
       </div>
     </div>
