@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { admin } from '@/lib/firebase-admin';
-import { DatabaseService } from '@/lib/db';
+import { DatabaseServiceAdmin } from '@/lib/db-admin';
 
 export async function POST(request: NextRequest) {
   try {
@@ -20,13 +20,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    console.log('Creating Firebase Auth user...');
     // Create Firebase Auth user
     const userRecord = await admin.auth().createUser({
       email,
       password,
       displayName: name,
     });
+    console.log('Firebase Auth user created:', userRecord.uid);
 
+    console.log('Setting custom claims...');
     // Set custom claims for team access
     await admin.auth().setCustomUserClaims(userRecord.uid, {
       isAdmin: false,
@@ -34,14 +37,17 @@ export async function POST(request: NextRequest) {
       isTeam: true,
       teamId: userRecord.uid, // Use the UID as the team ID
     });
+    console.log('Custom claims set successfully');
 
+    console.log('Creating team document in Firestore...');
     // Create team document in Firestore
-    await DatabaseService.createTeamWithId(userRecord.uid, {
+    await DatabaseServiceAdmin.createTeamWithId(userRecord.uid, {
       name,
       email,
       password: '', // Don't store password in Firestore
       categories,
     });
+    console.log('Team document created successfully');
 
     return NextResponse.json({
       success: true,
@@ -49,8 +55,13 @@ export async function POST(request: NextRequest) {
       message: 'Team created successfully',
     });
   } catch (error: unknown) {
-    const err = error as { code?: string; message?: string };
+    const err = error as { code?: string; message?: string; stack?: string };
     console.error('Error creating team:', err);
+    console.error('Error details:', {
+      code: err.code,
+      message: err.message,
+      stack: err.stack,
+    });
 
     if (err.code === 'auth/email-already-exists') {
       return NextResponse.json(
@@ -60,7 +71,7 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { error: 'Failed to create team' },
+      { error: 'Failed to create team', details: err.message },
       { status: 500 }
     );
   }
