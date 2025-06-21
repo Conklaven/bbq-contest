@@ -226,6 +226,25 @@ export default function JudgeDashboard() {
     }, 500);
   };
 
+  // Flip camera function - switch to next available camera
+  const flipCamera = async () => {
+    if (isScanning || isInitializing || availableCameras.length < 2) return;
+
+    const currentIndex = availableCameras.findIndex(
+      camera => camera.deviceId === selectedCamera?.deviceId
+    );
+    const nextIndex = (currentIndex + 1) % availableCameras.length;
+    const nextCamera = availableCameras[nextIndex];
+
+    console.log(
+      'Flipping camera from',
+      selectedCamera?.label,
+      'to',
+      nextCamera.label
+    );
+    await switchCamera(nextCamera);
+  };
+
   // Initialize scanner when user is authenticated
   useEffect(() => {
     if (!loading && !user) {
@@ -346,11 +365,42 @@ export default function JudgeDashboard() {
 
           {/* QR Scanner */}
           <div className="flex justify-center mb-6">
-            <div
-              id="qr-reader"
-              ref={qrReaderRef}
-              className="w-full max-w-md"
-            ></div>
+            <div className="relative">
+              <div
+                id="qr-reader"
+                ref={qrReaderRef}
+                className="w-full max-w-md"
+              ></div>
+
+              {/* Camera Flip Button */}
+              {availableCameras.length > 1 && (
+                <button
+                  onClick={flipCamera}
+                  disabled={isScanning || isInitializing}
+                  className={`absolute top-4 right-4 p-2 rounded-full bg-black bg-opacity-50 text-white hover:bg-opacity-70 transition ${
+                    isScanning || isInitializing
+                      ? 'opacity-50 cursor-not-allowed'
+                      : ''
+                  }`}
+                  title="Flip Camera"
+                >
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                    />
+                  </svg>
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Camera Selection */}
@@ -403,6 +453,16 @@ export default function JudgeDashboard() {
               <li>
                 • You&apos;ll be redirected to the scoring form once scanned
               </li>
+              {availableCameras.length > 1 && selectedCamera && (
+                <li className="text-blue-700 font-medium">
+                  • Current camera: {selectedCamera.label || 'Camera'}
+                  {availableCameras.length > 1 && (
+                    <span className="text-blue-600 ml-2">
+                      (Tap the flip button to switch)
+                    </span>
+                  )}
+                </li>
+              )}
             </ul>
           </div>
         </div>
