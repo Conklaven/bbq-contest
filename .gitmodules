@@ -1,0 +1,3 @@
+[submodule "bbq-judge"]
+	path = bbq-judge
+	url = https://github.com/Conklaven/bbq-judge.git
