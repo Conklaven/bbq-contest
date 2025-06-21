@@ -105,7 +105,6 @@ export default function ScoreForm({ params }: ScoreFormProps) {
     } catch (err) {
       console.error('Error submitting score:', err);
       setError('Failed to submit score. Please try again.');
-    } finally {
       setIsSubmitting(false);
     }
   };
