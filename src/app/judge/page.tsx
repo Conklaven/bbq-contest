@@ -1,12 +1,9 @@
 'use client';
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/AuthContext';
 import { Html5QrcodeScanner } from 'html5-qrcode';
 import { Toaster } from 'react-hot-toast';
-
-// Global flag to prevent multiple scanner instances
-let globalScannerActive = false;
 
 export default function JudgeDashboard() {
   const { user, loading } = useAuth();
@@ -14,10 +11,11 @@ export default function JudgeDashboard() {
   const scannerRef = useRef<Html5QrcodeScanner | null>(null);
   const qrReaderRef = useRef<HTMLDivElement | null>(null);
   const [isScanning, setIsScanning] = useState(false);
-  const [scannerKey, setScannerKey] = useState(0);
   const [isInitializing, setIsInitializing] = useState(false);
+  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
+  const [error, setError] = useState<string>('');
 
-  // Helper to fully clear scanner and DOM
+  // Cleanup scanner
   const cleanupScanner = () => {
     if (scannerRef.current) {
       try {
@@ -27,97 +25,121 @@ export default function JudgeDashboard() {
         console.error('Error cleaning up scanner:', error);
       }
     }
-    globalScannerActive = false;
     setIsScanning(false);
   };
 
-  const handleScanResult = useCallback(
-    (result: string) => {
-      if (isScanning && result) {
-        setIsScanning(false);
-        router.push(`/judge/${result}`);
-      }
-    },
-    [isScanning, router]
-  );
-
-  const initializeScanner = useCallback(() => {
-    if (globalScannerActive || isInitializing) {
+  // Initialize scanner
+  const initializeScanner = async () => {
+    if (isInitializing || isScanning || scannerRef.current) {
       return;
     }
 
     setIsInitializing(true);
+    setError('');
 
-    // Small delay to ensure any previous scanner is fully cleaned up
-    setTimeout(() => {
-      // Double-check that no scanner is active
-      if (globalScannerActive) {
-        setIsInitializing(false);
-        return;
-      }
+    try {
+      // Check camera permission first
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      stream.getTracks().forEach(track => track.stop()); // Stop the test stream
+      setHasPermission(true);
 
-      cleanupScanner();
+      // Small delay to ensure DOM is ready
+      await new Promise(resolve => setTimeout(resolve, 100));
 
-      if (qrReaderRef.current) {
-        globalScannerActive = true;
+      if (qrReaderRef.current && !scannerRef.current) {
         scannerRef.current = new Html5QrcodeScanner(
           qrReaderRef.current.id,
           {
             fps: 10,
             qrbox: { width: 250, height: 250 },
             aspectRatio: 1.0,
+            supportedScanTypes: [0], // QR_CODE only
           },
           false
         );
 
         scannerRef.current.render(
           (decodedText: string) => {
-            handleScanResult(decodedText);
+            console.log('QR Code scanned:', decodedText);
+            setIsScanning(false);
+            router.push(`/judge/${decodedText}`);
           },
           (errorMessage: string) => {
-            // Completely ignore all QR scanner errors - they're all expected "no code detected" messages
-            // Only log if it's a critical error (camera permission, hardware issue, etc.)
+            // Only log critical errors, ignore normal "no code detected" messages
             const lowerMessage = errorMessage.toLowerCase();
 
-            // Only log critical errors, not scanning errors
-            const criticalErrors = [
-              'permission',
-              'camera',
-              'hardware',
-              'network',
-              'timeout',
-              'unauthorized',
-              'forbidden',
+            // List of normal "no code detected" messages to ignore
+            const ignorePatterns = [
+              'no multiformat readers were able to detect',
+              'notfoundexception',
+              'no qr code found',
+              'no barcode found',
+              'no code detected',
+              'qr code parse error',
+              'no valid qr code',
+              'no valid barcode',
+              'multiformat readers were able to detect',
+              'no barcode',
+              'no qr code',
+              'parse error',
+              'not found exception',
             ];
 
-            const isCriticalError = criticalErrors.some(pattern =>
+            // Check if this is a normal "no code detected" message
+            const shouldIgnore = ignorePatterns.some(pattern =>
               lowerMessage.includes(pattern)
             );
 
-            if (isCriticalError) {
-              console.error('Critical QR scanner error:', errorMessage);
+            // Only log if it's NOT a normal scanning message
+            if (!shouldIgnore) {
+              const criticalErrors = [
+                'permission',
+                'camera',
+                'hardware',
+                'network',
+                'timeout',
+                'unauthorized',
+                'forbidden',
+                'not allowed',
+                'access denied',
+                'device not found',
+                'constraint not satisfied',
+              ];
+
+              const isCriticalError = criticalErrors.some(pattern =>
+                lowerMessage.includes(pattern)
+              );
+
+              if (isCriticalError) {
+                console.error('Critical QR scanner error:', errorMessage);
+                setError(`Camera error: ${errorMessage}`);
+              }
             }
-            // All other errors are silently ignored
+            // All other errors (including normal "no code detected") are silently ignored
           }
         );
+
         setIsScanning(true);
       }
-
+    } catch (err) {
+      console.error('Error initializing scanner:', err);
+      setHasPermission(false);
+      setError(
+        'Camera permission denied. Please allow camera access and refresh the page.'
+      );
+    } finally {
       setIsInitializing(false);
-    }, 200); // Increased delay for better cleanup
-  }, [isInitializing, handleScanResult]);
+    }
+  };
 
+  // Initialize scanner when user is authenticated
   useEffect(() => {
     if (!loading && !user) {
       router.push('/judge/signin');
       return;
     }
 
-    // Cleanup on mount to ensure no leftover scanner
-    cleanupScanner();
-
-    // Initialize scanner if user is present
-    if (user) {
+    if (user && !isScanning && !scannerRef.current) {
       initializeScanner();
     }
 
@@ -125,18 +147,16 @@ export default function JudgeDashboard() {
     return () => {
       cleanupScanner();
     };
-  }, [user, loading, router, initializeScanner]);
+  }, [user, loading]);
 
-  // Effect to handle scanner key changes (for restart)
-  useEffect(() => {
-    if (scannerKey > 0 && user) {
+  // Restart scanner
+  const restartScanner = () => {
+    cleanupScanner();
+    setError('');
+    setHasPermission(null);
+    setTimeout(() => {
       initializeScanner();
-    }
-  }, [scannerKey, user, initializeScanner]);
-
-  const startScanning = () => {
-    // Force remount of scanner container and re-init
-    setScannerKey(prev => prev + 1);
+    }, 500);
   };
 
   if (loading) {
@@ -192,15 +212,57 @@ export default function JudgeDashboard() {
               closer or adjusting the lighting.
             </p>
           </div>
+
+          {/* Camera Permission Error */}
+          {hasPermission === false && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+              <h3 className="font-semibold text-red-900 mb-2">
+                Camera Access Required
+              </h3>
+              <p className="text-red-800 text-sm mb-4">{error}</p>
+              <button
+                onClick={restartScanner}
+                className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition"
+              >
+                Try Again
+              </button>
+            </div>
+          )}
+
+          {/* Scanner Error */}
+          {error && hasPermission !== false && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+              <h3 className="font-semibold text-yellow-900 mb-2">
+                Scanner Issue
+              </h3>
+              <p className="text-yellow-800 text-sm mb-4">{error}</p>
+              <button
+                onClick={restartScanner}
+                className="bg-yellow-600 text-white px-4 py-2 rounded-md hover:bg-yellow-700 transition"
+              >
+                Restart Scanner
+              </button>
+            </div>
+          )}
+
           {/* QR Scanner */}
           <div className="flex justify-center mb-6">
             <div
               id="qr-reader"
               ref={qrReaderRef}
               className="w-full max-w-md"
-              key={scannerKey}
             ></div>
           </div>
+
+          {/* Loading State */}
+          {isInitializing && (
+            <div className="text-center mb-6">
+              <div className="text-lg text-gray-800">
+                Initializing camera...
+              </div>
+            </div>
+          )}
+
           {/* Instructions */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <h3 className="font-semibold text-blue-900 mb-2">Instructions:</h3>
@@ -215,15 +277,15 @@ export default function JudgeDashboard() {
               </li>
             </ul>
           </div>
+
           {/* Manual restart button */}
-          {!isScanning && (
+          {!isScanning && !isInitializing && (
             <div className="text-center mt-6">
               <button
-                onClick={startScanning}
-                disabled={isInitializing}
-                className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={restartScanner}
+                className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition"
               >
-                {isInitializing ? 'Initializing...' : 'Restart Scanner'}
+                Restart Scanner
               </button>
             </div>
           )}

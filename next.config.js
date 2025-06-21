@@ -1,11 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: {
-    esmExternals: 'loose',
-  },
   webpack: (config, { isServer }) => {
     // Exclude tools directory from build
-    config.externals = config.externals || [];
     if (!isServer) {
       config.resolve.fallback = {
         ...config.resolve.fallback,
