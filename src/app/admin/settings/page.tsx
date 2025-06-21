@@ -8,6 +8,7 @@ interface ContestSettings {
   contestName: string;
   contestDate: string;
   maxScorePerCategory: number;
+  judgingPassword?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -22,6 +23,7 @@ export default function SettingsPage() {
     contestDate: '',
     maxScorePerCategory: 10,
     categories: [] as string[],
+    judgingPassword: '',
   });
 
   useEffect(() => {
@@ -39,6 +41,7 @@ export default function SettingsPage() {
           contestDate: savedSettings.contestDate,
           maxScorePerCategory: savedSettings.maxScorePerCategory,
           categories: [...savedSettings.categories],
+          judgingPassword: savedSettings.judgingPassword || '',
         });
       } else {
         // Create default settings if none exist
@@ -65,6 +68,7 @@ export default function SettingsPage() {
           contestDate: defaultSettings.contestDate,
           maxScorePerCategory: defaultSettings.maxScorePerCategory,
           categories: [...defaultSettings.categories],
+          judgingPassword: '',
         });
       }
     } catch (error) {
@@ -78,6 +82,10 @@ export default function SettingsPage() {
     e.preventDefault();
     setSaving(true);
     try {
+      console.log(
+        'Debug - Saving settings with password:',
+        formData.judgingPassword
+      );
       await DatabaseService.saveSettings(formData);
 
       // Update local state
@@ -215,6 +223,27 @@ export default function SettingsPage() {
 
             <div className="mb-6">
               <label className="block text-sm font-medium mb-2 text-gray-900">
+                Judging Password
+              </label>
+              <input
+                type="text"
+                value={formData.judgingPassword}
+                onChange={e =>
+                  setFormData(prev => ({
+                    ...prev,
+                    judgingPassword: e.target.value,
+                  }))
+                }
+                className="w-full p-2 border rounded text-gray-900"
+                required
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                This password will be required for all judges to sign in.
+              </p>
+            </div>
+
+            <div className="mb-6">
+              <label className="block text-sm font-medium mb-2 text-gray-900">
                 Contest Categories
               </label>
               <div className="flex gap-2 mb-4">
@@ -323,6 +352,16 @@ export default function SettingsPage() {
             <div>
               <strong className="text-gray-900">Total Categories:</strong>
               <p className="text-gray-800">{formData.categories.length}</p>
+            </div>
+            <div>
+              <strong className="text-gray-900">Judging Password:</strong>
+              <p className="text-gray-800">
+                {formData.judgingPassword ? (
+                  '••••••••'
+                ) : (
+                  <span className="italic">Not set</span>
+                )}
+              </p>
             </div>
           </div>
         </div>

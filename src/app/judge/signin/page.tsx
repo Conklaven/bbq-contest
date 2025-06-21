@@ -8,6 +8,7 @@ import Link from 'next/link';
 
 export default function JudgeSignIn() {
   const [displayName, setDisplayName] = useState('');
+  const [judgePassword, setJudgePassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const router = useRouter();
@@ -19,14 +20,42 @@ export default function JudgeSignIn() {
       setError('Please enter your name');
       return;
     }
+    if (!judgePassword.trim()) {
+      setError('Please enter the judging password');
+      return;
+    }
 
     setIsLoading(true);
     setError('');
 
     try {
-      // Sign in anonymously
+      // First, sign in anonymously to get authentication
       const userCredential = await signInAnonymously(auth);
       const user = userCredential.user;
+
+      // Now fetch settings with authentication
+      const settings = await DatabaseService.getSettings();
+
+      if (!settings) {
+        setError(
+          'Contest settings not found. Please contact the administrator.'
+        );
+        return;
+      }
+
+      // Debug logging
+      console.log('Debug - Entered password:', judgePassword);
+      console.log('Debug - Settings password:', settings.judgingPassword);
+      console.log('Debug - Settings object:', settings);
+      console.log(
+        'Debug - Password match:',
+        judgePassword === (settings.judgingPassword || '')
+      );
+
+      if (judgePassword !== (settings.judgingPassword || '')) {
+        setError('Incorrect judging password.');
+        return;
+      }
 
       // Store judge info in Firestore
       await DatabaseService.createJudge({
@@ -53,7 +82,7 @@ export default function JudgeSignIn() {
           </h1>
 
           <p className="text-gray-900 text-center mb-6">
-            Enter your name to begin judging BBQ items
+            Enter your name and the judging password to begin judging BBQ items
           </p>
 
           <form onSubmit={handleSignIn} className="space-y-4">
@@ -73,6 +102,25 @@ export default function JudgeSignIn() {
                 placeholder="Enter your name"
                 disabled={isLoading}
                 autoFocus
+                autoComplete="name"
+              />
+            </div>
+            <div>
+              <label
+                htmlFor="judgePassword"
+                className="block text-sm font-medium text-gray-900 mb-2"
+              >
+                Judging Password
+              </label>
+              <input
+                type="password"
+                id="judgePassword"
+                value={judgePassword}
+                onChange={e => setJudgePassword(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-gray-800 text-gray-900"
+                placeholder="Enter judging password"
+                disabled={isLoading}
+                autoComplete="current-password"
               />
             </div>
 
@@ -82,7 +130,9 @@ export default function JudgeSignIn() {
 
             <button
               type="submit"
-              disabled={isLoading || !displayName.trim()}
+              disabled={
+                isLoading || !displayName.trim() || !judgePassword.trim()
+              }
               className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition"
             >
               {isLoading ? 'Signing In...' : 'Start Judging'}

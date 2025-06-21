@@ -60,6 +60,7 @@ export interface ContestSettings {
   contestDate: string;
   maxScorePerCategory: number;
   categories: string[];
+  judgingPassword?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -166,6 +167,7 @@ export const settingsConverter = {
     contestDate: settings.contestDate,
     maxScorePerCategory: settings.maxScorePerCategory,
     categories: settings.categories,
+    judgingPassword: settings.judgingPassword || '',
     createdAt: settings.createdAt,
     updatedAt: settings.updatedAt,
   }),
@@ -177,6 +179,7 @@ export const settingsConverter = {
       contestDate: data?.contestDate || '',
       maxScorePerCategory: data?.maxScorePerCategory || 10,
       categories: data?.categories || [],
+      judgingPassword: data?.judgingPassword || '',
       createdAt: data?.createdAt?.toDate() || new Date(),
       updatedAt: data?.updatedAt?.toDate() || new Date(),
     };
