@@ -2,8 +2,7 @@
 import { useState, useEffect } from 'react';
 import { DatabaseService, Team } from '@/lib/db';
 import { generateQRPackPDF, downloadPDF } from '@/lib/qrGenerator';
-
-const CATEGORIES = ['Brisket', 'Ribs', 'Chicken', 'Pork', 'Turkey', 'Sausage'];
+import { useSettings } from '@/lib/useSettings';
 
 export default function TeamsPage() {
   const [teams, setTeams] = useState<Team[]>([]);
@@ -13,8 +12,11 @@ export default function TeamsPage() {
   const [generatingPDF, setGeneratingPDF] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
+    email: '',
+    password: '',
     categories: [] as string[],
   });
+  const { settings, loading: settingsLoading } = useSettings();
 
   useEffect(() => {
     loadTeams();
@@ -39,15 +41,30 @@ export default function TeamsPage() {
         // Note: You'll need to add updateTeam method to DatabaseService
         console.log('Update team:', editingTeam.id, formData);
       } else {
-        // Create new team
-        await DatabaseService.createTeam(formData);
+        // Create new team using API route
+        const response = await fetch('/api/teams', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(formData),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to create team');
+        }
+
+        const result = await response.json();
+        console.log('Team created successfully:', result);
       }
-      setFormData({ name: '', categories: [] });
+      setFormData({ name: '', email: '', password: '', categories: [] });
       setShowForm(false);
       setEditingTeam(null);
       loadTeams();
     } catch (error) {
       console.error('Error saving team:', error);
+      alert('Error creating team: ' + (error as Error).message);
     }
   };
 
@@ -76,26 +93,68 @@ export default function TeamsPage() {
     setEditingTeam(team);
     setFormData({
       name: team.name,
+      email: team.email,
+      password: team.password,
       categories: team.categories,
     });
     setShowForm(true);
   };
 
-  if (loading) {
-    return <div className="text-center py-8">Loading teams...</div>;
+  const deleteTeam = async (team: Team) => {
+    if (
+      !confirm(
+        `Are you sure you want to delete team "${team.name}"? This action cannot be undone.`
+      )
+    ) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/teams/${team.id}`, {
+        method: 'DELETE',
+      });
+
+      const responseText = await response.text();
+      console.log('API Response:', response.status, responseText);
+
+      if (!response.ok) {
+        let errorMessage = 'Failed to delete team';
+        try {
+          const errorData = JSON.parse(responseText);
+          errorMessage = errorData.error || errorMessage;
+        } catch {
+          errorMessage = `Server error: ${response.status} - ${responseText}`;
+        }
+        throw new Error(errorMessage);
+      }
+
+      console.log('Team deleted successfully');
+      loadTeams(); // Reload the teams list
+    } catch (error) {
+      console.error('Error deleting team:', error);
+      alert('Error deleting team: ' + (error as Error).message);
+    }
+  };
+
+  if (loading || settingsLoading) {
+    return (
+      <div className="text-center py-8 text-gray-800">Loading teams...</div>
+    );
   }
+
+  const categories = settings?.categories || [];
 
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Teams Management</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Teams Management</h1>
         <div className="flex gap-2">
           <button
             onClick={handleGenerateQRPack}
             disabled={generatingPDF}
             className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 disabled:opacity-50"
           >
-            {generatingPDF ? 'Generating...' : 'Generate QR Pack (PDF)'}
+            {generatingPDF ? 'Generating...' : 'Generate QR Codes (PDF)'}
           </button>
           <button
             onClick={() => setShowForm(true)}
@@ -108,12 +167,12 @@ export default function TeamsPage() {
 
       {showForm && (
         <div className="bg-white p-6 rounded-lg shadow mb-6">
-          <h2 className="text-lg font-semibold mb-4">
+          <h2 className="text-lg font-semibold mb-4 text-gray-900">
             {editingTeam ? 'Edit Team' : 'Add New Team'}
           </h2>
           <form onSubmit={handleSubmit}>
             <div className="mb-4">
-              <label className="block text-sm font-medium mb-2">
+              <label className="block text-sm font-medium mb-2 text-gray-900">
                 Team Name
               </label>
               <input
@@ -122,17 +181,48 @@ export default function TeamsPage() {
                 onChange={e =>
                   setFormData(prev => ({ ...prev, name: e.target.value }))
                 }
-                className="w-full p-2 border rounded"
+                className="w-full p-2 border rounded text-gray-900"
                 required
               />
             </div>
             <div className="mb-4">
-              <label className="block text-sm font-medium mb-2">
+              <label className="block text-sm font-medium mb-2 text-gray-900">
+                Email
+              </label>
+              <input
+                type="email"
+                value={formData.email}
+                onChange={e =>
+                  setFormData(prev => ({ ...prev, email: e.target.value }))
+                }
+                className="w-full p-2 border rounded text-gray-900"
+                required
+              />
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm font-medium mb-2 text-gray-900">
+                Password
+              </label>
+              <input
+                type="password"
+                value={formData.password}
+                onChange={e =>
+                  setFormData(prev => ({ ...prev, password: e.target.value }))
+                }
+                className="w-full p-2 border rounded text-gray-900"
+                required
+              />
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm font-medium mb-2 text-gray-900">
                 Categories
               </label>
               <div className="grid grid-cols-2 gap-2">
-                {CATEGORIES.map(category => (
-                  <label key={category} className="flex items-center">
+                {categories.map(category => (
+                  <label
+                    key={category}
+                    className="flex items-center text-gray-900"
+                  >
                     <input
                       type="checkbox"
                       checked={formData.categories.includes(category)}
@@ -156,7 +246,12 @@ export default function TeamsPage() {
                 onClick={() => {
                   setShowForm(false);
                   setEditingTeam(null);
-                  setFormData({ name: '', categories: [] });
+                  setFormData({
+                    name: '',
+                    email: '',
+                    password: '',
+                    categories: [],
+                  });
                 }}
                 className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
               >
@@ -169,19 +264,22 @@ export default function TeamsPage() {
 
       <div className="bg-white shadow rounded-lg">
         <div className="px-6 py-4 border-b">
-          <h3 className="text-lg font-medium">All Teams</h3>
+          <h3 className="text-lg font-medium text-gray-900">All Teams</h3>
         </div>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
                   Team Name
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                  Email
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
                   Categories
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
@@ -192,7 +290,10 @@ export default function TeamsPage() {
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                     {team.name}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
+                    {team.email}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
                     {team.categories.join(', ')}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -203,10 +304,7 @@ export default function TeamsPage() {
                       Edit
                     </button>
                     <button
-                      onClick={() => {
-                        // TODO: Implement delete
-                        console.log('Delete team:', team.id);
-                      }}
+                      onClick={() => deleteTeam(team)}
                       className="text-red-600 hover:text-red-900"
                     >
                       Delete

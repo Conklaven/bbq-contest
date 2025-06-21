@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import { auth } from '@/lib/firebase';
@@ -11,12 +11,20 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const { user, loading: authLoading } = useAuth();
+  const { user, claims, loading: authLoading } = useAuth();
 
-  if (user && !authLoading) {
-    router.replace('/');
-    return null;
-  }
+  // Redirect if user is already logged in
+  useEffect(() => {
+    if (user && !authLoading) {
+      if (claims?.isAdmin) {
+        router.replace('/admin/teams');
+      } else if (claims?.isJudge) {
+        router.replace('/judge'); // TODO: Create judge dashboard
+      } else {
+        router.replace('/');
+      }
+    }
+  }, [user, claims, authLoading, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,13 +32,35 @@ export default function LoginPage() {
     setError('');
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      router.replace('/');
+      // The redirect will be handled by the useEffect above
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Login failed');
     } finally {
       setLoading(false);
     }
   };
+
+  // Show loading while checking auth state
+  if (authLoading) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="text-lg text-gray-800">Loading...</div>
+        </div>
+      </main>
+    );
+  }
+
+  // Don't show login form if user is already logged in
+  if (user) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="text-lg text-gray-800">Redirecting...</div>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-gray-50">

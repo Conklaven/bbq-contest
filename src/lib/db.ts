@@ -7,6 +7,7 @@ import {
   addDoc,
   setDoc,
   updateDoc,
+  deleteDoc,
   query,
   where,
   limit,
@@ -19,6 +20,8 @@ import {
 export interface Team {
   id: string;
   name: string;
+  email: string;
+  password: string;
   categories: string[];
   createdAt: Date;
   updatedAt: Date;
@@ -51,18 +54,31 @@ export interface Score {
   updatedAt: Date;
 }
 
+export interface ContestSettings {
+  id: string;
+  contestName: string;
+  contestDate: string;
+  maxScorePerCategory: number;
+  categories: string[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 // Collection names
 export const COLLECTIONS = {
   TEAMS: 'teams',
   ITEMS: 'items',
   JUDGES: 'judges',
   SCORES: 'scores',
+  SETTINGS: 'settings',
 } as const;
 
 // Type converters for Firestore
 export const teamConverter = {
   toFirestore: (team: Omit<Team, 'id'>): DocumentData => ({
     name: team.name,
+    email: team.email,
+    password: team.password,
     categories: team.categories,
     createdAt: team.createdAt,
     updatedAt: team.updatedAt,
@@ -72,6 +88,8 @@ export const teamConverter = {
     return {
       id: snapshot.id,
       name: data?.name || '',
+      email: data?.email || '',
+      password: data?.password || '',
       categories: data?.categories || [],
       createdAt: data?.createdAt?.toDate() || new Date(),
       updatedAt: data?.updatedAt?.toDate() || new Date(),
@@ -142,6 +160,29 @@ export const scoreConverter = {
   },
 };
 
+export const settingsConverter = {
+  toFirestore: (settings: Omit<ContestSettings, 'id'>): DocumentData => ({
+    contestName: settings.contestName,
+    contestDate: settings.contestDate,
+    maxScorePerCategory: settings.maxScorePerCategory,
+    categories: settings.categories,
+    createdAt: settings.createdAt,
+    updatedAt: settings.updatedAt,
+  }),
+  fromFirestore: (snapshot: DocumentSnapshot): ContestSettings => {
+    const data = snapshot.data();
+    return {
+      id: snapshot.id,
+      contestName: data?.contestName || '',
+      contestDate: data?.contestDate || '',
+      maxScorePerCategory: data?.maxScorePerCategory || 10,
+      categories: data?.categories || [],
+      createdAt: data?.createdAt?.toDate() || new Date(),
+      updatedAt: data?.updatedAt?.toDate() || new Date(),
+    };
+  },
+};
+
 // Database helper functions
 export class DatabaseService {
   // Teams
@@ -172,6 +213,25 @@ export class DatabaseService {
       updatedAt: now,
     });
     return docRef.id;
+  }
+
+  static async createTeamWithId(
+    id: string,
+    team: Omit<Team, 'id' | 'createdAt' | 'updatedAt'>
+  ): Promise<string> {
+    const teamRef = doc(db, COLLECTIONS.TEAMS, id).withConverter(teamConverter);
+    const now = new Date();
+    await setDoc(teamRef, {
+      ...team,
+      createdAt: now,
+      updatedAt: now,
+    });
+    return id;
+  }
+
+  static async deleteTeam(id: string): Promise<void> {
+    const teamRef = doc(db, COLLECTIONS.TEAMS, id);
+    await deleteDoc(teamRef);
   }
 
   // Items
@@ -319,5 +379,42 @@ export class DatabaseService {
       callback();
     });
     return unsubscribe;
+  }
+
+  // Settings
+  static async getSettings(): Promise<ContestSettings | null> {
+    const settingsRef = collection(db, COLLECTIONS.SETTINGS).withConverter(
+      settingsConverter
+    );
+    const snapshot = await getDocs(settingsRef);
+    return snapshot.docs.length > 0
+      ? (snapshot.docs[0].data() as ContestSettings)
+      : null;
+  }
+
+  static async saveSettings(
+    settings: Omit<ContestSettings, 'id' | 'createdAt' | 'updatedAt'>
+  ): Promise<void> {
+    const settingsRef = collection(db, COLLECTIONS.SETTINGS).withConverter(
+      settingsConverter
+    );
+    const snapshot = await getDocs(settingsRef);
+
+    if (snapshot.docs.length > 0) {
+      // Update existing settings
+      const docRef = doc(db, COLLECTIONS.SETTINGS, snapshot.docs[0].id);
+      await updateDoc(docRef, {
+        ...settings,
+        updatedAt: new Date(),
+      });
+    } else {
+      // Create new settings
+      const now = new Date();
+      await addDoc(settingsRef, {
+        ...settings,
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
   }
 }

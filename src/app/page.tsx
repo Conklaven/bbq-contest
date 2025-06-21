@@ -1,4 +1,33 @@
+'use client';
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/lib/AuthContext';
+
 export default function Home() {
+  const router = useRouter();
+  const { user, claims, loading } = useAuth();
+
+  // Redirect logged-in users to appropriate dashboard
+  useEffect(() => {
+    if (!loading && user) {
+      if (claims?.isAdmin) {
+        router.replace('/admin/teams');
+      } else if (claims?.isJudge) {
+        router.replace('/judge'); // TODO: Create judge dashboard
+      }
+    }
+  }, [user, claims, loading, router]);
+
+  // Show loading while checking auth state
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 p-8">
+        <div className="text-lg text-gray-800">Loading...</div>
+      </div>
+    );
+  }
+
+  // Show home page for logged-out users
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 p-8">
       <h1 className="text-4xl font-bold mb-4 text-center">

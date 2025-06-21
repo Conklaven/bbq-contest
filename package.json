@@ -11,7 +11,8 @@
     "format": "prettier --write .",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
-    "seed": "tsx scripts/seed.ts"
+    "seed": "tsx scripts/seed.ts",
+    "seed-admin": "node scripts/seed-admin.js"
   },
   "dependencies": {
     "firebase": "^11.9.1",

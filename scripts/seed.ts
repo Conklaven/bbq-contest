@@ -11,11 +11,36 @@ const db = admin.firestore();
 
 // Sample data
 const SAMPLE_TEAMS = [
-  { name: 'Smoke Masters', categories: ['Brisket', 'Ribs', 'Chicken'] },
-  { name: 'BBQ Legends', categories: ['Brisket', 'Pork', 'Turkey'] },
-  { name: 'Grill Masters', categories: ['Ribs', 'Chicken', 'Sausage'] },
-  { name: 'Pit Bosses', categories: ['Brisket', 'Ribs', 'Pork'] },
-  { name: 'Smoke & Fire', categories: ['Chicken', 'Turkey', 'Sausage'] },
+  {
+    name: 'Smoke Masters',
+    email: 'smokemasters@example.com',
+    password: 'password123',
+    categories: ['Brisket', 'Ribs', 'Chicken'],
+  },
+  {
+    name: 'BBQ Legends',
+    email: 'bbqlegends@example.com',
+    password: 'password123',
+    categories: ['Brisket', 'Pork', 'Turkey'],
+  },
+  {
+    name: 'Grill Masters',
+    email: 'grillmasters@example.com',
+    password: 'password123',
+    categories: ['Ribs', 'Chicken', 'Sausage'],
+  },
+  {
+    name: 'Pit Bosses',
+    email: 'pitbosses@example.com',
+    password: 'password123',
+    categories: ['Brisket', 'Ribs', 'Pork'],
+  },
+  {
+    name: 'Smoke & Fire',
+    email: 'smokeandfire@example.com',
+    password: 'password123',
+    categories: ['Chicken', 'Turkey', 'Sausage'],
+  },
 ];
 
 // Generate random 6-character item code
@@ -51,14 +76,46 @@ async function seedTeams() {
   console.log('Seeding teams...');
 
   for (const teamData of SAMPLE_TEAMS) {
-    const teamRef = db.collection('teams').doc();
-    await teamRef.set({
-      name: teamData.name,
-      categories: teamData.categories,
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
-    console.log(`Created team: ${teamData.name} (ID: ${teamRef.id})`);
+    try {
+      // Create Firebase Auth user
+      const userRecord = await admin.auth().createUser({
+        email: teamData.email,
+        password: teamData.password,
+        displayName: teamData.name,
+      });
+
+      // Set custom claims for team access
+      await admin.auth().setCustomUserClaims(userRecord.uid, {
+        isAdmin: false,
+        isJudge: false,
+        isTeam: true,
+        teamId: userRecord.uid,
+      });
+
+      // Create team document in Firestore using the Auth UID
+      const teamRef = db.collection('teams').doc(userRecord.uid);
+      await teamRef.set({
+        name: teamData.name,
+        email: teamData.email,
+        password: '', // Don't store password in Firestore
+        categories: teamData.categories,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      console.log(`Created team: ${teamData.name} (ID: ${userRecord.uid})`);
+    } catch (error: unknown) {
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'code' in error &&
+        (error as { code: unknown }).code === 'auth/email-already-exists'
+      ) {
+        console.log(`Team ${teamData.name} already exists, skipping...`);
+      } else {
+        console.error(`Error creating team ${teamData.name}:`, error);
+      }
+    }
   }
 }
 

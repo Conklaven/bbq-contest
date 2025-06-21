@@ -50,5 +50,11 @@ service cloud.firestore {
       allow update: if isAdmin() || (isJudge() && request.auth.uid == resource.data.judgeId);
       allow delete: if isAdmin();
     }
+    
+    // Settings collection
+    match /settings/{settingId} {
+      allow read: if isAdmin() || isJudge();
+      allow write: if isAdmin();
+    }
   }
 } 
