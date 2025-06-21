@@ -168,20 +168,6 @@ export default function JudgeDashboard() {
             fps: 10,
             qrbox: { width: 250, height: 250 },
             aspectRatio: 1.0,
-            supportedScanTypes: [0], // QR_CODE only
-            // Simplified camera constraints to prevent flickering
-            videoConstraints: preferredCamera
-              ? {
-                  deviceId: { exact: preferredCamera.deviceId },
-                  width: { ideal: 1280 },
-                  height: { ideal: 720 },
-                }
-              : {
-                  // If no specific camera detected, try to use back camera via facingMode
-                  facingMode: { ideal: 'environment' },
-                  width: { ideal: 1280 },
-                  height: { ideal: 720 },
-                },
           },
           false
         );
@@ -436,11 +422,9 @@ export default function JudgeDashboard() {
           {/* QR Scanner */}
           <div className="flex justify-center mb-6">
             <div className="relative">
-              <div
-                id="qr-reader"
-                ref={qrReaderRef}
-                className="w-full max-w-md"
-              ></div>
+              <div id="qr-reader" ref={qrReaderRef} className="w-full max-w-md">
+                {/* Camera preview will be inserted here by Html5QrcodeScanner */}
+              </div>
 
               {/* Camera Flip Button */}
               {availableCameras.length > 1 && (
