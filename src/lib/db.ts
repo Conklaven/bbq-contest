@@ -12,6 +12,7 @@ import {
   limit,
   DocumentData,
   DocumentSnapshot,
+  onSnapshot,
 } from 'firebase/firestore';
 
 // Type definitions based on ERD
@@ -215,6 +216,17 @@ export class DatabaseService {
     return docRef.id;
   }
 
+  static async updateItem(
+    id: string,
+    item: Partial<Omit<Item, 'id' | 'createdAt'>>
+  ): Promise<void> {
+    const itemRef = doc(db, COLLECTIONS.ITEMS, id).withConverter(itemConverter);
+    await updateDoc(itemRef, {
+      ...item,
+      updatedAt: new Date(),
+    });
+  }
+
   // Judges
   static async getJudges(): Promise<Judge[]> {
     const judgesRef = collection(db, COLLECTIONS.JUDGES).withConverter(
@@ -299,5 +311,13 @@ export class DatabaseService {
       ...score,
       updatedAt: new Date(),
     });
+  }
+
+  static subscribeToScores(callback: () => void): () => void {
+    const scoresRef = collection(db, COLLECTIONS.SCORES);
+    const unsubscribe = onSnapshot(scoresRef, () => {
+      callback();
+    });
+    return unsubscribe;
   }
 }
