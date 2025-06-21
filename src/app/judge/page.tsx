@@ -246,23 +246,6 @@ export default function JudgeDashboard() {
     }
   }, [router]);
 
-  // Switch camera function
-  const switchCamera = async (camera: MediaDeviceInfo) => {
-    if (isScanning || isInitializing) return;
-
-    console.log('Switching to camera:', camera.label);
-    setSelectedCamera(camera);
-    storeCameraId(camera.deviceId); // Store the new camera preference
-
-    // Clean up current scanner
-    cleanupScanner();
-
-    // Wait a bit longer before reinitializing to ensure proper cleanup
-    setTimeout(() => {
-      initializeScanner();
-    }, 1000);
-  };
-
   // Flip camera function - switch to next available camera
   const flipCamera = async () => {
     if (isScanning || isInitializing || availableCameras.length < 2) return;
@@ -475,33 +458,7 @@ export default function JudgeDashboard() {
           </div>
 
           {/* Camera Selection */}
-          {availableCameras.length > 1 && (
-            <div className="mb-6">
-              <h3 className="text-sm font-medium text-gray-700 mb-2 text-center">
-                Camera Selection
-              </h3>
-              <div className="flex justify-center gap-2">
-                {availableCameras.map((camera, index) => (
-                  <button
-                    key={camera.deviceId}
-                    onClick={() => switchCamera(camera)}
-                    disabled={isScanning || isInitializing}
-                    className={`px-3 py-1 text-xs rounded-md transition ${
-                      selectedCamera?.deviceId === camera.deviceId
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                    } ${
-                      isScanning || isInitializing
-                        ? 'opacity-50 cursor-not-allowed'
-                        : ''
-                    }`}
-                  >
-                    {camera.label || `Camera ${index + 1}`}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
+          {/* Removed camera selection buttons - keeping only flip camera button */}
 
           {/* Loading State */}
           {isInitializing && (
@@ -524,14 +481,10 @@ export default function JudgeDashboard() {
               <li>
                 • You&apos;ll be redirected to the scoring form once scanned
               </li>
-              {availableCameras.length > 1 && selectedCamera && (
+              {availableCameras.length > 1 && (
                 <li className="text-blue-700 font-medium">
-                  • Current camera: {selectedCamera.label || 'Camera'}
-                  {availableCameras.length > 1 && (
-                    <span className="text-blue-600 ml-2">
-                      (Tap the flip button to switch)
-                    </span>
-                  )}
+                  • Tap the flip camera button to switch between front and back
+                  cameras
                 </li>
               )}
             </ul>
