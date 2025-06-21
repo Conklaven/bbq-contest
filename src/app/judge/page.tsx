@@ -126,20 +126,6 @@ export default function JudgeDashboard() {
         totalDevices: videoDevices.length,
       });
 
-      // Request camera permission with preferred camera
-      const constraints = {
-        video: preferredCamera
-          ? {
-              deviceId: { exact: preferredCamera.deviceId },
-              facingMode: { ideal: 'environment' }, // Prefer back camera
-            }
-          : { facingMode: { ideal: 'environment' } },
-      };
-
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      stream.getTracks().forEach(track => track.stop()); // Stop the test stream
-      setHasPermission(true);
-
       // Small delay to ensure DOM is ready
       await new Promise(resolve => setTimeout(resolve, 100));
 
@@ -151,11 +137,10 @@ export default function JudgeDashboard() {
             qrbox: { width: 250, height: 250 },
             aspectRatio: 1.0,
             supportedScanTypes: [0], // QR_CODE only
-            // Configure camera selection with multiple fallbacks
+            // Simplified camera constraints to prevent flickering
             videoConstraints: preferredCamera
               ? {
                   deviceId: { exact: preferredCamera.deviceId },
-                  facingMode: { ideal: 'environment' },
                   width: { ideal: 1280 },
                   height: { ideal: 720 },
                 }
@@ -246,14 +231,17 @@ export default function JudgeDashboard() {
   const switchCamera = async (camera: MediaDeviceInfo) => {
     if (isScanning || isInitializing) return;
 
+    console.log('Switching to camera:', camera.label);
     setSelectedCamera(camera);
     storeCameraId(camera.deviceId); // Store the new camera preference
+
+    // Clean up current scanner
     cleanupScanner();
 
-    // Small delay before reinitializing
+    // Wait a bit longer before reinitializing to ensure proper cleanup
     setTimeout(() => {
       initializeScanner();
-    }, 500);
+    }, 1000);
   };
 
   // Flip camera function - switch to next available camera
@@ -275,12 +263,14 @@ export default function JudgeDashboard() {
 
     setSelectedCamera(nextCamera);
     storeCameraId(nextCamera.deviceId); // Store the new camera preference
+
+    // Clean up current scanner
     cleanupScanner();
 
-    // Small delay before reinitializing
+    // Wait a bit longer before reinitializing to ensure proper cleanup
     setTimeout(() => {
       initializeScanner();
-    }, 500);
+    }, 1000);
   };
 
   // Initialize scanner when user is authenticated
@@ -299,7 +289,7 @@ export default function JudgeDashboard() {
     return () => {
       cleanupScanner();
     };
-  }, [user, loading, isScanning, hasPermission, initializeScanner, router]);
+  }, [user, loading, initializeScanner, router]);
 
   // Auto-retry initialization if permission is granted but scanner failed
   useEffect(() => {
@@ -309,9 +299,11 @@ export default function JudgeDashboard() {
       !scannerRef.current &&
       !isInitializing
     ) {
-      setTimeout(() => {
+      const timer = setTimeout(() => {
         initializeScanner();
       }, 1000);
+
+      return () => clearTimeout(timer);
     }
   }, [hasPermission, isScanning, isInitializing, initializeScanner]);
 
@@ -427,22 +419,39 @@ export default function JudgeDashboard() {
                       ? 'opacity-50 cursor-not-allowed'
                       : ''
                   }`}
-                  title="Flip Camera"
+                  title={isInitializing ? 'Switching camera...' : 'Flip Camera'}
                 >
-                  <svg
-                    className="w-5 h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                    />
-                  </svg>
+                  {isInitializing ? (
+                    <svg
+                      className="w-5 h-5 animate-spin"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                      />
+                    </svg>
+                  ) : (
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                      />
+                    </svg>
+                  )}
                 </button>
               )}
             </div>
