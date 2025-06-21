@@ -1,0 +1,54 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && request.auth.token.isAdmin == true;
+    }
+    
+    function isJudge() {
+      return isAuthenticated() && request.auth.token.isJudge == true;
+    }
+    
+    function isTeam() {
+      return isAuthenticated() && request.auth.token.isTeam == true;
+    }
+    
+    function isTeamMember(teamId) {
+      return isAuthenticated() && request.auth.token.teamId == teamId;
+    }
+    
+    // Teams collection
+    match /teams/{teamId} {
+      allow read: if isAdmin() || isTeamMember(teamId);
+      allow write: if isAdmin();
+    }
+    
+    // Items collection
+    match /items/{itemId} {
+      allow read: if isAdmin() || isJudge() || isTeamMember(resource.data.teamId);
+      allow write: if isAdmin();
+    }
+    
+    // Judges collection
+    match /judges/{judgeId} {
+      allow read: if isAdmin() || (isAuthenticated() && request.auth.uid == judgeId);
+      allow write: if isAdmin() || (isAuthenticated() && request.auth.uid == judgeId);
+    }
+    
+    // Scores collection
+    match /scores/{scoreId} {
+      allow read: if isAdmin() || 
+                   (isJudge() && request.auth.uid == resource.data.judgeId) ||
+                   (isTeam() && exists(/databases/$(database)/documents/items/$(resource.data.itemId)) && 
+                    get(/databases/$(database)/documents/items/$(resource.data.itemId)).data.teamId == request.auth.token.teamId);
+      allow create: if isAdmin() || (isJudge() && request.auth.uid == request.resource.data.judgeId);
+      allow update: if isAdmin() || (isJudge() && request.auth.uid == resource.data.judgeId);
+      allow delete: if isAdmin();
+    }
+  }
+} 

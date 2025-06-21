@@ -38,6 +38,49 @@ This project uses Firebase for:
 
 Firebase is configured in `src/lib/firebase.ts` and automatically initializes the necessary services.
 
+### Database Collections
+
+The application uses the following Firestore collections:
+
+- **Teams**: `{ id, name, categories: ["Brisket",...] }`
+- **Items**: `{ id, teamId, category, itemCode }`
+- **Judges**: `{ uid, displayName }`
+- **Scores**: `{ itemId, judgeId, taste, tenderness, appearance, createdAt }`
+
+### Security Rules
+
+Firebase security rules are defined in `firestore.rules`:
+
+- **Teams**: Can read their own documents and scores only
+- **Judges**: Can write scores but cannot read team names
+- **Admins**: Have full access to all collections
+
+The rules use custom claims (`isAdmin`, `isJudge`, `isTeam`) for role-based access control.
+
+### Database Helper
+
+The `src/lib/db.ts` file provides:
+
+- Type-safe database operations
+- Firestore converters for proper data typing
+- Helper methods for common queries
+
+### Seed Script
+
+To populate the database with sample data:
+
+```bash
+npm run seed
+```
+
+This will create:
+
+- 5 sample teams with different BBQ categories
+- Items for each team with unique 6-character codes (for QR codes)
+- 4 sample judges
+
+**Note**: You'll need to set up Firebase Admin SDK credentials to run the seed script.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:
