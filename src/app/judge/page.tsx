@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/AuthContext';
 import { Html5QrcodeScanner } from 'html5-qrcode';
@@ -21,6 +21,21 @@ export default function JudgeDashboard() {
     null
   );
 
+  // Get stored camera preference
+  const getStoredCameraId = () => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('preferredCameraId');
+    }
+    return null;
+  };
+
+  // Store camera preference
+  const storeCameraId = (deviceId: string) => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('preferredCameraId', deviceId);
+    }
+  };
+
   // Cleanup scanner
   const cleanupScanner = () => {
     if (scannerRef.current) {
@@ -35,7 +50,7 @@ export default function JudgeDashboard() {
   };
 
   // Initialize scanner
-  const initializeScanner = async () => {
+  const initializeScanner = useCallback(async () => {
     if (isInitializing || isScanning || scannerRef.current) {
       return;
     }
@@ -59,6 +74,12 @@ export default function JudgeDashboard() {
           label: d.label,
           groupId: d.groupId,
         }))
+      );
+
+      // Get stored camera preference
+      const storedCameraId = getStoredCameraId();
+      const storedCamera = videoDevices.find(
+        device => device.deviceId === storedCameraId
       );
 
       // More comprehensive rear camera detection
@@ -85,13 +106,21 @@ export default function JudgeDashboard() {
       const fallbackRearCamera =
         !rearCamera && videoDevices.length > 1 ? videoDevices[1] : null;
 
+      // Priority: stored camera > rear camera > fallback > first camera
       const preferredCamera =
-        rearCamera || fallbackRearCamera || videoDevices[0];
+        storedCamera || rearCamera || fallbackRearCamera || videoDevices[0];
+
       setSelectedCamera(preferredCamera);
+
+      // Store the selected camera for future use
+      if (preferredCamera) {
+        storeCameraId(preferredCamera.deviceId);
+      }
 
       console.log('Selected camera:', {
         deviceId: preferredCamera?.deviceId,
         label: preferredCamera?.label,
+        isStored: !!storedCamera,
         isRear: !!rearCamera,
         isFallback: !!fallbackRearCamera,
         totalDevices: videoDevices.length,
@@ -211,13 +240,14 @@ export default function JudgeDashboard() {
     } finally {
       setIsInitializing(false);
     }
-  };
+  }, [router]);
 
   // Switch camera function
   const switchCamera = async (camera: MediaDeviceInfo) => {
     if (isScanning || isInitializing) return;
 
     setSelectedCamera(camera);
+    storeCameraId(camera.deviceId); // Store the new camera preference
     cleanupScanner();
 
     // Small delay before reinitializing
@@ -242,7 +272,15 @@ export default function JudgeDashboard() {
       'to',
       nextCamera.label
     );
-    await switchCamera(nextCamera);
+
+    setSelectedCamera(nextCamera);
+    storeCameraId(nextCamera.deviceId); // Store the new camera preference
+    cleanupScanner();
+
+    // Small delay before reinitializing
+    setTimeout(() => {
+      initializeScanner();
+    }, 500);
   };
 
   // Initialize scanner when user is authenticated
@@ -261,7 +299,7 @@ export default function JudgeDashboard() {
     return () => {
       cleanupScanner();
     };
-  }, [user, loading]);
+  }, [user, loading, isScanning, hasPermission, initializeScanner, router]);
 
   // Auto-retry initialization if permission is granted but scanner failed
   useEffect(() => {
@@ -275,7 +313,14 @@ export default function JudgeDashboard() {
         initializeScanner();
       }, 1000);
     }
-  }, [hasPermission, isScanning, isInitializing]);
+  }, [hasPermission, isScanning, isInitializing, initializeScanner]);
+
+  // Cleanup scanner when component unmounts or user changes
+  useEffect(() => {
+    return () => {
+      cleanupScanner();
+    };
+  }, []);
 
   if (loading) {
     return (
