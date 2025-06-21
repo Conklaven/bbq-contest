@@ -1,0 +1,223 @@
+'use client';
+import { useState, useEffect } from 'react';
+import { DatabaseService, Team } from '@/lib/db';
+import { generateQRPackPDF, downloadPDF } from '@/lib/qrGenerator';
+
+const CATEGORIES = ['Brisket', 'Ribs', 'Chicken', 'Pork', 'Turkey', 'Sausage'];
+
+export default function TeamsPage() {
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [editingTeam, setEditingTeam] = useState<Team | null>(null);
+  const [generatingPDF, setGeneratingPDF] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    categories: [] as string[],
+  });
+
+  useEffect(() => {
+    loadTeams();
+  }, []);
+
+  const loadTeams = async () => {
+    try {
+      const teamsData = await DatabaseService.getTeams();
+      setTeams(teamsData);
+    } catch (error) {
+      console.error('Error loading teams:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      if (editingTeam) {
+        // Update existing team
+        // Note: You'll need to add updateTeam method to DatabaseService
+        console.log('Update team:', editingTeam.id, formData);
+      } else {
+        // Create new team
+        await DatabaseService.createTeam(formData);
+      }
+      setFormData({ name: '', categories: [] });
+      setShowForm(false);
+      setEditingTeam(null);
+      loadTeams();
+    } catch (error) {
+      console.error('Error saving team:', error);
+    }
+  };
+
+  const handleGenerateQRPack = async () => {
+    setGeneratingPDF(true);
+    try {
+      const pdfBytes = await generateQRPackPDF();
+      downloadPDF(pdfBytes, 'bbq-contest-qr-codes.pdf');
+    } catch (error) {
+      console.error('Error generating QR pack:', error);
+    } finally {
+      setGeneratingPDF(false);
+    }
+  };
+
+  const handleCategoryToggle = (category: string) => {
+    setFormData(prev => ({
+      ...prev,
+      categories: prev.categories.includes(category)
+        ? prev.categories.filter(c => c !== category)
+        : [...prev.categories, category],
+    }));
+  };
+
+  const editTeam = (team: Team) => {
+    setEditingTeam(team);
+    setFormData({
+      name: team.name,
+      categories: team.categories,
+    });
+    setShowForm(true);
+  };
+
+  if (loading) {
+    return <div className="text-center py-8">Loading teams...</div>;
+  }
+
+  return (
+    <div>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">Teams Management</h1>
+        <div className="flex gap-2">
+          <button
+            onClick={handleGenerateQRPack}
+            disabled={generatingPDF}
+            className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 disabled:opacity-50"
+          >
+            {generatingPDF ? 'Generating...' : 'Generate QR Pack (PDF)'}
+          </button>
+          <button
+            onClick={() => setShowForm(true)}
+            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+          >
+            Add Team
+          </button>
+        </div>
+      </div>
+
+      {showForm && (
+        <div className="bg-white p-6 rounded-lg shadow mb-6">
+          <h2 className="text-lg font-semibold mb-4">
+            {editingTeam ? 'Edit Team' : 'Add New Team'}
+          </h2>
+          <form onSubmit={handleSubmit}>
+            <div className="mb-4">
+              <label className="block text-sm font-medium mb-2">
+                Team Name
+              </label>
+              <input
+                type="text"
+                value={formData.name}
+                onChange={e =>
+                  setFormData(prev => ({ ...prev, name: e.target.value }))
+                }
+                className="w-full p-2 border rounded"
+                required
+              />
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm font-medium mb-2">
+                Categories
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                {CATEGORIES.map(category => (
+                  <label key={category} className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={formData.categories.includes(category)}
+                      onChange={() => handleCategoryToggle(category)}
+                      className="mr-2"
+                    />
+                    {category}
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button
+                type="submit"
+                className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+              >
+                {editingTeam ? 'Update' : 'Create'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowForm(false);
+                  setEditingTeam(null);
+                  setFormData({ name: '', categories: [] });
+                }}
+                className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      <div className="bg-white shadow rounded-lg">
+        <div className="px-6 py-4 border-b">
+          <h3 className="text-lg font-medium">All Teams</h3>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Team Name
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Categories
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {teams.map(team => (
+                <tr key={team.id}>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    {team.name}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {team.categories.join(', ')}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <button
+                      onClick={() => editTeam(team)}
+                      className="text-indigo-600 hover:text-indigo-900 mr-4"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => {
+                        // TODO: Implement delete
+                        console.log('Delete team:', team.id);
+                      }}
+                      className="text-red-600 hover:text-red-900"
+                    >
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
