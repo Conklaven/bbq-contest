@@ -149,13 +149,13 @@ export class DatabaseService {
       teamConverter
     );
     const snapshot = await getDocs(teamsRef);
-    return snapshot.docs.map(doc => doc.data());
+    return snapshot.docs.map(doc => doc.data() as Team);
   }
 
   static async getTeam(id: string): Promise<Team | null> {
     const teamRef = doc(db, COLLECTIONS.TEAMS, id).withConverter(teamConverter);
     const snapshot = await getDoc(teamRef);
-    return snapshot.exists() ? snapshot.data() : null;
+    return snapshot.exists() ? (snapshot.data() as Team) : null;
   }
 
   static async createTeam(
@@ -179,7 +179,7 @@ export class DatabaseService {
       itemConverter
     );
     const snapshot = await getDocs(itemsRef);
-    return snapshot.docs.map(doc => doc.data());
+    return snapshot.docs.map(doc => doc.data() as Item);
   }
 
   static async getItemsByTeam(teamId: string): Promise<Item[]> {
@@ -188,7 +188,7 @@ export class DatabaseService {
     );
     const q = query(itemsRef, where('teamId', '==', teamId));
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => doc.data());
+    return snapshot.docs.map(doc => doc.data() as Item);
   }
 
   static async getItemByCode(itemCode: string): Promise<Item | null> {
@@ -197,7 +197,7 @@ export class DatabaseService {
     );
     const q = query(itemsRef, where('itemCode', '==', itemCode), limit(1));
     const snapshot = await getDocs(q);
-    return snapshot.docs.length > 0 ? snapshot.docs[0].data() : null;
+    return snapshot.docs.length > 0 ? (snapshot.docs[0].data() as Item) : null;
   }
 
   static async createItem(
@@ -221,7 +221,7 @@ export class DatabaseService {
       judgeConverter
     );
     const snapshot = await getDocs(judgesRef);
-    return snapshot.docs.map(doc => doc.data());
+    return snapshot.docs.map(doc => doc.data() as Judge);
   }
 
   static async getJudge(uid: string): Promise<Judge | null> {
@@ -229,7 +229,7 @@ export class DatabaseService {
       judgeConverter
     );
     const snapshot = await getDoc(judgeRef);
-    return snapshot.exists() ? snapshot.data() : null;
+    return snapshot.exists() ? (snapshot.data() as Judge) : null;
   }
 
   static async createJudge(
@@ -252,7 +252,7 @@ export class DatabaseService {
       scoreConverter
     );
     const snapshot = await getDocs(scoresRef);
-    return snapshot.docs.map(doc => doc.data());
+    return snapshot.docs.map(doc => doc.data() as Score);
   }
 
   static async getScoresByItem(itemId: string): Promise<Score[]> {
@@ -261,7 +261,7 @@ export class DatabaseService {
     );
     const q = query(scoresRef, where('itemId', '==', itemId));
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => doc.data());
+    return snapshot.docs.map(doc => doc.data() as Score);
   }
 
   static async getScoresByJudge(judgeId: string): Promise<Score[]> {
@@ -270,7 +270,7 @@ export class DatabaseService {
     );
     const q = query(scoresRef, where('judgeId', '==', judgeId));
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => doc.data());
+    return snapshot.docs.map(doc => doc.data() as Score);
   }
 
   static async createScore(
