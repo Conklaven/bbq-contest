@@ -30,6 +30,9 @@ export default function DebugPage() {
         <p className="text-gray-800">
           <strong>Display Name:</strong> {user.displayName || 'None'}
         </p>
+        <p className="text-gray-800">
+          <strong>Is Anonymous:</strong> {user.isAnonymous ? 'Yes' : 'No'}
+        </p>
       </div>
 
       <div className="bg-gray-100 p-4 rounded mb-4">
@@ -50,52 +53,60 @@ export default function DebugPage() {
         <p className="text-gray-800">
           <strong>Is Team:</strong> {claims?.isTeam ? '✅ Yes' : '❌ No'}
         </p>
+        <p className="text-gray-800">
+          <strong>Team ID:</strong> {(claims?.teamId as string) || 'None'}
+        </p>
       </div>
 
-      <div className="bg-gray-100 p-4 rounded">
-        <h2 className="font-bold mb-2 text-gray-900">Available Routes:</h2>
-        <ul className="list-disc list-inside text-gray-800">
+      <div className="bg-gray-100 p-4 rounded mb-4">
+        <h2 className="font-bold mb-2 text-gray-900">Navigation:</h2>
+        <div className="flex gap-2">
+          <Link
+            href="/"
+            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+          >
+            Home
+          </Link>
           {claims?.isAdmin && (
-            <li>
-              <Link
-                href="/admin/teams"
-                className="text-blue-600 hover:underline"
-              >
-                Admin Teams
-              </Link>
-            </li>
-          )}
-          {claims?.isAdmin && (
-            <li>
-              <Link
-                href="/admin/items"
-                className="text-blue-600 hover:underline"
-              >
-                Admin Items
-              </Link>
-            </li>
-          )}
-          {claims?.isAdmin && (
-            <li>
-              <Link
-                href="/admin/scoreboard"
-                className="text-blue-600 hover:underline"
-              >
-                Admin Scoreboard
-              </Link>
-            </li>
-          )}
-          <li>
-            <Link href="/" className="text-blue-600 hover:underline">
-              Home
+            <Link
+              href="/admin/teams"
+              className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+            >
+              Admin Dashboard
             </Link>
-          </li>
-          <li>
-            <Link href="/login" className="text-blue-600 hover:underline">
-              Login
+          )}
+          {claims?.isTeam && (
+            <Link
+              href="/team"
+              className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700"
+            >
+              Team Dashboard
             </Link>
-          </li>
-        </ul>
+          )}
+          {claims?.isJudge && (
+            <Link
+              href="/judge"
+              className="bg-orange-600 text-white px-4 py-2 rounded hover:bg-orange-700"
+            >
+              Judge Dashboard
+            </Link>
+          )}
+        </div>
+      </div>
+
+      <div className="bg-gray-100 p-4 rounded mb-4">
+        <h2 className="font-bold mb-2 text-gray-900">Token Analysis:</h2>
+        <p className="text-gray-800">
+          <strong>Expected Team ID:</strong> {user.uid}
+        </p>
+        <p className="text-gray-800">
+          <strong>Claims Team ID:</strong>{' '}
+          {(claims?.teamId as string) || 'None'}
+        </p>
+        <p className="text-gray-800">
+          <strong>Match:</strong>{' '}
+          {user.uid === (claims?.teamId as string) ? '✅ Yes' : '❌ No'}
+        </p>
       </div>
     </div>
   );

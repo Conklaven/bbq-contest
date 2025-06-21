@@ -14,6 +14,8 @@ export default function Home() {
   useEffect(() => {
     if (!loading && user && claims?.isAdmin) {
       router.replace('/admin/teams');
+    } else if (!loading && user && claims?.isTeam) {
+      router.replace('/team');
     }
   }, [user, claims, loading, router]);
 
@@ -39,7 +41,7 @@ export default function Home() {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 p-8">
       <h1 className="text-4xl font-bold mb-4 text-center text-gray-900">
-        Welcome to the BBQ Contest Judging App
+        Welcome to the ASBEE Kosher BBQ Contest Judging App
       </h1>
       <p className="text-lg text-gray-900 mb-8 text-center max-w-xl">
         This is the official platform for managing teams, items, judges, and
@@ -57,12 +59,19 @@ export default function Home() {
           href="/judge/signin/"
           className="bg-green-600 text-white px-6 py-3 rounded-lg text-lg font-semibold hover:bg-green-700 transition-colors text-center"
         >
-          Judge Sign In
+          Judge Login
+        </Link>
+        <Link
+          href="/team/login"
+          className="bg-purple-600 text-white px-6 py-3 rounded-lg text-lg font-semibold hover:bg-purple-700 transition-colors text-center"
+        >
+          Team Login
         </Link>
       </div>
 
       <div className="mt-8 text-center text-sm text-gray-800">
         <p>Judges: Enter your name to begin scoring items</p>
+        <p>Teams: Use your email to access your scores</p>
         <p>Admins: Use your credentials to manage the contest</p>
       </div>
 

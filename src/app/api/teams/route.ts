@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { admin } from '@/lib/firebase-admin';
 import { DatabaseServiceAdmin } from '@/lib/db-admin';
+import { EmailService } from '@/lib/email-service';
 
 export async function POST(request: NextRequest) {
   try {
@@ -48,6 +49,17 @@ export async function POST(request: NextRequest) {
       categories,
     });
     console.log('Team document created successfully');
+
+    // Send welcome email
+    console.log('Sending welcome email...');
+    const loginUrl = `${request.nextUrl.origin}/team/login`;
+    await EmailService.sendWelcomeEmail({
+      teamName: name,
+      teamEmail: email,
+      categories,
+      loginUrl,
+    });
+    console.log('Welcome email sent successfully');
 
     return NextResponse.json({
       success: true,

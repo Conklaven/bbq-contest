@@ -15,7 +15,7 @@ service cloud.firestore {
     }
     
     function isTeam() {
-      return isAuthenticated() && request.auth.token.teamId == teamId;
+      return isAuthenticated() && request.auth.token.isTeam == true;
     }
     
     function isTeamMember(teamId) {

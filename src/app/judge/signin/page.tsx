@@ -49,7 +49,7 @@ export default function JudgeSignIn() {
       <div className="w-full max-w-md">
         <div className="bg-white rounded-lg shadow-md p-8">
           <h1 className="text-3xl font-bold text-center mb-6 text-gray-900">
-            Judge Sign-In
+            Judge Login
           </h1>
 
           <p className="text-gray-900 text-center mb-6">

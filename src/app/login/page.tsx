@@ -20,6 +20,8 @@ export default function LoginPage() {
         router.replace('/admin/teams');
       } else if (claims?.isJudge) {
         router.replace('/judge'); // TODO: Create judge dashboard
+      } else if (claims?.isTeam) {
+        router.replace('/team');
       } else {
         router.replace('/');
       }

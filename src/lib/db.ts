@@ -345,6 +345,24 @@ export class DatabaseService {
     return snapshot.docs.map(doc => doc.data() as Score);
   }
 
+  static async getScoresByTeam(teamId: string): Promise<Score[]> {
+    // First get all items for this team
+    const items = await this.getItemsByTeam(teamId);
+    const itemIds = items.map(item => item.id);
+
+    if (itemIds.length === 0) {
+      return [];
+    }
+
+    // Then get scores for these items
+    const scoresRef = collection(db, COLLECTIONS.SCORES).withConverter(
+      scoreConverter
+    );
+    const q = query(scoresRef, where('itemId', 'in', itemIds));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => doc.data() as Score);
+  }
+
   static async createScore(
     score: Omit<Score, 'id' | 'createdAt' | 'updatedAt'>
   ): Promise<string> {
