@@ -31,10 +31,11 @@ export default function ScoreboardPage() {
   useEffect(() => {
     const loadScoreboard = async () => {
       try {
-        const [teams, scores, items] = await Promise.all([
+        const [teams, scores, items, settings] = await Promise.all([
           DatabaseService.getTeams(),
           DatabaseService.getScores(),
           DatabaseService.getItems(),
+          DatabaseService.getSettings(),
         ]);
 
         // Create maps for quick lookup
@@ -48,9 +49,9 @@ export default function ScoreboardPage() {
           itemCodeMap.set(item.id, item.itemCode);
         });
 
-        // Get unique categories
-        const uniqueCategories = [...new Set(items.map(item => item.category))];
-        setCategories(uniqueCategories);
+        // Get categories from contest settings instead of items
+        const contestCategories = settings?.categories || [];
+        setCategories(contestCategories);
 
         // Calculate overall team scores
         const teamScoreMap = new Map<string, TeamScore>();
@@ -64,7 +65,7 @@ export default function ScoreboardPage() {
           });
         });
 
-        // Calculate category-specific scores
+        // Calculate category-specific scores (only for contest categories)
         const categoryScoreMap = new Map<string, CategoryScore>();
 
         scores.forEach(score => {
@@ -86,27 +87,29 @@ export default function ScoreboardPage() {
                   teamScore.totalScore / teamScore.scores.length;
               }
 
-              // Add to category score
-              const categoryKey = `${teamId}-${category}`;
-              let categoryScore = categoryScoreMap.get(categoryKey);
-              if (!categoryScore) {
-                categoryScore = {
-                  team,
-                  category,
-                  scores: [],
-                  totalScore: 0,
-                  averageScore: 0,
-                  itemCode,
-                };
-                categoryScoreMap.set(categoryKey, categoryScore);
-              }
+              // Only add to category score if it's a contest category
+              if (contestCategories.includes(category)) {
+                const categoryKey = `${teamId}-${category}`;
+                let categoryScore = categoryScoreMap.get(categoryKey);
+                if (!categoryScore) {
+                  categoryScore = {
+                    team,
+                    category,
+                    scores: [],
+                    totalScore: 0,
+                    averageScore: 0,
+                    itemCode,
+                  };
+                  categoryScoreMap.set(categoryKey, categoryScore);
+                }
 
-              const scoreValue =
-                score.taste + score.tenderness + score.appearance;
-              categoryScore.scores.push(score);
-              categoryScore.totalScore += scoreValue;
-              categoryScore.averageScore =
-                categoryScore.totalScore / categoryScore.scores.length;
+                const scoreValue =
+                  score.taste + score.tenderness + score.appearance;
+                categoryScore.scores.push(score);
+                categoryScore.totalScore += scoreValue;
+                categoryScore.averageScore =
+                  categoryScore.totalScore / categoryScore.scores.length;
+              }
             }
           }
         });

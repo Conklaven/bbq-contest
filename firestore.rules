@@ -15,7 +15,7 @@ service cloud.firestore {
     }
     
     function isTeam() {
-      return isAuthenticated() && request.auth.token.isTeam == true;
+      return isAuthenticated() && request.auth.token.teamId == teamId;
     }
     
     function isTeamMember(teamId) {
@@ -28,9 +28,9 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
     
-    // Items collection
+    // Items collection - allow any authenticated user (including anonymous judges) to read items
     match /items/{itemId} {
-      allow read: if isAdmin() || isJudge() || isTeamMember(resource.data.teamId);
+      allow read: if isAuthenticated();
       allow write: if isAdmin();
     }
     
@@ -43,18 +43,18 @@ service cloud.firestore {
     // Scores collection
     match /scores/{scoreId} {
       allow read: if isAdmin() || 
-                   (isJudge() && request.auth.uid == resource.data.judgeId) ||
+                   (isAuthenticated() && request.auth.uid == resource.data.judgeId) ||
                    (isTeam() && exists(/databases/$(database)/documents/items/$(resource.data.itemId)) && 
                     get(/databases/$(database)/documents/items/$(resource.data.itemId)).data.teamId == request.auth.token.teamId);
-      allow create: if isAdmin() || (isJudge() && request.auth.uid == request.resource.data.judgeId);
-      allow update: if isAdmin() || (isJudge() && request.auth.uid == resource.data.judgeId);
+      allow create: if isAdmin() || (isAuthenticated() && request.auth.uid == request.resource.data.judgeId);
+      allow update: if isAdmin() || (isAuthenticated() && request.auth.uid == resource.data.judgeId);
       allow delete: if isAdmin();
     }
     
     // Settings collection
     match /settings/{settingId} {
-      allow read: if isAdmin() || isJudge();
+      allow read: if isAdmin() || isAuthenticated();
       allow write: if isAdmin();
     }
   }
-} 
+}
