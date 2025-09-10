@@ -227,9 +227,11 @@ export default function TeamDashboard() {
           </div>
           <div className="bg-white rounded-lg shadow p-6">
             <div className="text-2xl font-bold text-purple-600">
-              {overallAverage.toFixed(2)}
+              {settings?.scoresVisible ? overallAverage.toFixed(2) : '••••'}
             </div>
-            <div className="text-sm text-gray-700">Overall Average</div>
+            <div className="text-sm text-gray-700">
+              {settings?.scoresVisible ? 'Overall Average' : 'Score Hidden'}
+            </div>
           </div>
         </div>
 
@@ -259,7 +261,16 @@ export default function TeamDashboard() {
                         </p>
                       </div>
                       <div className="text-right">
-                        {settings?.scoresVisible ? (
+                        {categoryScore.scores.length === 0 ? (
+                          <>
+                            <div className="text-2xl font-bold text-red-500">
+                              —
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              No Score Received
+                            </div>
+                          </>
+                        ) : settings?.scoresVisible ? (
                           <>
                             <div className="text-2xl font-bold text-blue-600">
                               {categoryScore.averageScore.toFixed(2)}
@@ -282,48 +293,56 @@ export default function TeamDashboard() {
                     </div>
 
                     {/* Score Breakdown */}
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
-                      <div className="bg-gray-50 rounded-lg p-4">
-                        <div className="text-sm font-medium text-gray-700">
-                          Taste
+                    {categoryScore.scores.length > 0 ? (
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+                        <div className="bg-gray-50 rounded-lg p-4">
+                          <div className="text-sm font-medium text-gray-700">
+                            Taste
+                          </div>
+                          <div className="text-xl font-bold text-green-600">
+                            {settings?.scoresVisible
+                              ? categoryScore.tasteScore.toFixed(2)
+                              : '••••'}
+                          </div>
                         </div>
-                        <div className="text-xl font-bold text-green-600">
-                          {settings?.scoresVisible
-                            ? categoryScore.tasteScore.toFixed(2)
-                            : '••••'}
+                        <div className="bg-gray-50 rounded-lg p-4">
+                          <div className="text-sm font-medium text-gray-700">
+                            Tenderness
+                          </div>
+                          <div className="text-xl font-bold text-blue-600">
+                            {settings?.scoresVisible
+                              ? categoryScore.tendernessScore.toFixed(2)
+                              : '••••'}
+                          </div>
+                        </div>
+                        <div className="bg-gray-50 rounded-lg p-4">
+                          <div className="text-sm font-medium text-gray-700">
+                            Appearance
+                          </div>
+                          <div className="text-xl font-bold text-purple-600">
+                            {settings?.scoresVisible
+                              ? categoryScore.appearanceScore.toFixed(2)
+                              : '••••'}
+                          </div>
+                        </div>
+                        <div className="bg-gray-50 rounded-lg p-4">
+                          <div className="text-sm font-medium text-gray-700">
+                            Total
+                          </div>
+                          <div className="text-xl font-bold text-gray-900">
+                            {settings?.scoresVisible
+                              ? categoryScore.totalScore.toFixed(2)
+                              : '••••'}
+                          </div>
                         </div>
                       </div>
-                      <div className="bg-gray-50 rounded-lg p-4">
-                        <div className="text-sm font-medium text-gray-700">
-                          Tenderness
-                        </div>
-                        <div className="text-xl font-bold text-blue-600">
-                          {settings?.scoresVisible
-                            ? categoryScore.tendernessScore.toFixed(2)
-                            : '••••'}
+                    ) : (
+                      <div className="bg-red-50 rounded-lg p-4 mb-4">
+                        <div className="text-center text-red-600 font-medium">
+                          This category has not been judged yet
                         </div>
                       </div>
-                      <div className="bg-gray-50 rounded-lg p-4">
-                        <div className="text-sm font-medium text-gray-700">
-                          Appearance
-                        </div>
-                        <div className="text-xl font-bold text-purple-600">
-                          {settings?.scoresVisible
-                            ? categoryScore.appearanceScore.toFixed(2)
-                            : '••••'}
-                        </div>
-                      </div>
-                      <div className="bg-gray-50 rounded-lg p-4">
-                        <div className="text-sm font-medium text-gray-700">
-                          Total
-                        </div>
-                        <div className="text-xl font-bold text-gray-900">
-                          {settings?.scoresVisible
-                            ? categoryScore.totalScore.toFixed(2)
-                            : '••••'}
-                        </div>
-                      </div>
-                    </div>
+                    )}
 
                     {/* Individual Scores */}
                     {categoryScore.scores.length > 0 && (
