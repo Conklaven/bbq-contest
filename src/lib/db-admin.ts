@@ -44,6 +44,8 @@ export interface ContestSettings {
   contestDate: string;
   maxScorePerCategory: number;
   categories: string[];
+  judgingPassword?: string;
+  scoresVisible: boolean;
   createdAt: Date;
   updatedAt: Date;
 }

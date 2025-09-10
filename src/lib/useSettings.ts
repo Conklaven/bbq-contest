@@ -29,6 +29,7 @@ export function useSettings() {
             'Turkey',
             'Sausage',
           ],
+          scoresVisible: false,
           createdAt: new Date(),
           updatedAt: new Date(),
         };
@@ -43,6 +44,7 @@ export function useSettings() {
         contestDate: new Date().toISOString().split('T')[0],
         maxScorePerCategory: 10,
         categories: ['Brisket', 'Ribs', 'Chicken', 'Pork', 'Turkey', 'Sausage'],
+        scoresVisible: false,
         createdAt: new Date(),
         updatedAt: new Date(),
       };

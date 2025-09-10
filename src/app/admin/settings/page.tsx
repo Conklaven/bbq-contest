@@ -9,6 +9,7 @@ interface ContestSettings {
   contestDate: string;
   maxScorePerCategory: number;
   judgingPassword?: string;
+  scoresVisible: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -24,6 +25,7 @@ export default function SettingsPage() {
     maxScorePerCategory: 10,
     categories: [] as string[],
     judgingPassword: '',
+    scoresVisible: false,
   });
 
   useEffect(() => {
@@ -42,6 +44,7 @@ export default function SettingsPage() {
           maxScorePerCategory: savedSettings.maxScorePerCategory,
           categories: [...savedSettings.categories],
           judgingPassword: savedSettings.judgingPassword || '',
+          scoresVisible: savedSettings.scoresVisible ?? false,
         });
       } else {
         // Create default settings if none exist
@@ -58,6 +61,7 @@ export default function SettingsPage() {
             'Turkey',
             'Sausage',
           ],
+          scoresVisible: false,
           createdAt: new Date(),
           updatedAt: new Date(),
         };
@@ -69,6 +73,7 @@ export default function SettingsPage() {
           maxScorePerCategory: defaultSettings.maxScorePerCategory,
           categories: [...defaultSettings.categories],
           judgingPassword: '',
+          scoresVisible: false,
         });
       }
     } catch (error) {
@@ -244,6 +249,49 @@ export default function SettingsPage() {
 
             <div className="mb-6">
               <label className="block text-sm font-medium mb-2 text-gray-900">
+                Score Visibility
+              </label>
+              <div className="flex items-center gap-3">
+                <label className="flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formData.scoresVisible}
+                    onChange={e =>
+                      setFormData(prev => ({
+                        ...prev,
+                        scoresVisible: e.target.checked,
+                      }))
+                    }
+                    className="sr-only"
+                  />
+                  <div
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                      formData.scoresVisible ? 'bg-green-600' : 'bg-gray-200'
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        formData.scoresVisible
+                          ? 'translate-x-6'
+                          : 'translate-x-1'
+                      }`}
+                    />
+                  </div>
+                  <span className="ml-3 text-sm text-gray-700">
+                    {formData.scoresVisible
+                      ? 'Scores visible to teams'
+                      : 'Scores hidden from teams'}
+                  </span>
+                </label>
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                When enabled, teams can see their actual scores. When disabled,
+                teams only see that they have received scores.
+              </p>
+            </div>
+
+            <div className="mb-6">
+              <label className="block text-sm font-medium mb-2 text-gray-900">
                 Contest Categories
               </label>
               <div className="flex gap-2 mb-4">
@@ -360,6 +408,20 @@ export default function SettingsPage() {
                   '••••••••'
                 ) : (
                   <span className="italic">Not set</span>
+                )}
+              </p>
+            </div>
+            <div>
+              <strong className="text-gray-900">Score Visibility:</strong>
+              <p className="text-gray-800">
+                {formData.scoresVisible ? (
+                  <span className="text-green-600 font-medium">
+                    Visible to teams
+                  </span>
+                ) : (
+                  <span className="text-red-600 font-medium">
+                    Hidden from teams
+                  </span>
                 )}
               </p>
             </div>

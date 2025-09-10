@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/lib/AuthContext';
-import { DatabaseService, Team, Score } from '@/lib/db';
+import { DatabaseService, Team, Score, ContestSettings } from '@/lib/db';
 import { useRouter } from 'next/navigation';
 import { signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
@@ -21,6 +21,7 @@ export default function TeamDashboard() {
   const { user, claims, loading: authLoading } = useAuth();
   const [team, setTeam] = useState<Team | null>(null);
   const [teamScores, setTeamScores] = useState<TeamScore[]>([]);
+  const [settings, setSettings] = useState<ContestSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const router = useRouter();
@@ -39,10 +40,15 @@ export default function TeamDashboard() {
         return;
       }
 
-      // Get team data
-      const teamData = await DatabaseService.getTeam(teamId);
+      // Get team data and settings
+      const [teamData, contestSettings] = await Promise.all([
+        DatabaseService.getTeam(teamId),
+        DatabaseService.getSettings(),
+      ]);
       console.log('Debug - Team data:', teamData);
+      console.log('Debug - Settings:', contestSettings);
       setTeam(teamData);
+      setSettings(contestSettings);
 
       // Get all items for this team
       const items = await DatabaseService.getItemsByTeam(teamId);
@@ -253,12 +259,25 @@ export default function TeamDashboard() {
                         </p>
                       </div>
                       <div className="text-right">
-                        <div className="text-2xl font-bold text-blue-600">
-                          {categoryScore.averageScore.toFixed(2)}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          Average Score
-                        </div>
+                        {settings?.scoresVisible ? (
+                          <>
+                            <div className="text-2xl font-bold text-blue-600">
+                              {categoryScore.averageScore.toFixed(2)}
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              Average Score
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <div className="text-2xl font-bold text-gray-400">
+                              ••••
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              Score Received
+                            </div>
+                          </>
+                        )}
                       </div>
                     </div>
 
@@ -269,7 +288,9 @@ export default function TeamDashboard() {
                           Taste
                         </div>
                         <div className="text-xl font-bold text-green-600">
-                          {categoryScore.tasteScore.toFixed(2)}
+                          {settings?.scoresVisible
+                            ? categoryScore.tasteScore.toFixed(2)
+                            : '••••'}
                         </div>
                       </div>
                       <div className="bg-gray-50 rounded-lg p-4">
@@ -277,7 +298,9 @@ export default function TeamDashboard() {
                           Tenderness
                         </div>
                         <div className="text-xl font-bold text-blue-600">
-                          {categoryScore.tendernessScore.toFixed(2)}
+                          {settings?.scoresVisible
+                            ? categoryScore.tendernessScore.toFixed(2)
+                            : '••••'}
                         </div>
                       </div>
                       <div className="bg-gray-50 rounded-lg p-4">
@@ -285,7 +308,9 @@ export default function TeamDashboard() {
                           Appearance
                         </div>
                         <div className="text-xl font-bold text-purple-600">
-                          {categoryScore.appearanceScore.toFixed(2)}
+                          {settings?.scoresVisible
+                            ? categoryScore.appearanceScore.toFixed(2)
+                            : '••••'}
                         </div>
                       </div>
                       <div className="bg-gray-50 rounded-lg p-4">
@@ -293,7 +318,9 @@ export default function TeamDashboard() {
                           Total
                         </div>
                         <div className="text-xl font-bold text-gray-900">
-                          {categoryScore.totalScore.toFixed(2)}
+                          {settings?.scoresVisible
+                            ? categoryScore.totalScore.toFixed(2)
+                            : '••••'}
                         </div>
                       </div>
                     </div>
@@ -310,13 +337,19 @@ export default function TeamDashboard() {
                             <div
                               key={score.id}
                               className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium"
-                              title={`Judge ${index + 1}: Taste ${score.taste}, Tenderness ${score.tenderness}, Appearance ${score.appearance}`}
+                              title={
+                                settings?.scoresVisible
+                                  ? `Judge ${index + 1}: Taste ${score.taste}, Tenderness ${score.tenderness}, Appearance ${score.appearance}`
+                                  : `Judge ${index + 1}: Score received`
+                              }
                             >
-                              {(
-                                score.taste +
-                                score.tenderness +
-                                score.appearance
-                              ).toFixed(1)}
+                              {settings?.scoresVisible
+                                ? (
+                                    score.taste +
+                                    score.tenderness +
+                                    score.appearance
+                                  ).toFixed(1)
+                                : '••••'}
                             </div>
                           ))}
                         </div>
@@ -334,9 +367,15 @@ export default function TeamDashboard() {
           <p>
             Scores are updated in real-time as judges submit their evaluations.
           </p>
-          <p className="mt-1">
-            Final rankings will be announced at the awards ceremony.
-          </p>
+          {settings?.scoresVisible ? (
+            <p className="mt-1">
+              Final rankings will be announced at the awards ceremony.
+            </p>
+          ) : (
+            <p className="mt-1">
+              Scores will be revealed at the awards ceremony.
+            </p>
+          )}
         </div>
       </div>
     </div>
