@@ -7,6 +7,13 @@ export async function POST(request: NextRequest) {
   try {
     const { name, email, password, categories } = await request.json();
 
+    console.log('Team creation request received:', {
+      name: name ? 'provided' : 'missing',
+      email: email ? 'provided' : 'missing',
+      password: password ? `${password.length} chars` : 'missing',
+      categories: categories ? `${categories.length} items` : 'missing',
+    });
+
     // Validate required fields
     if (
       !name ||
@@ -17,6 +24,23 @@ export async function POST(request: NextRequest) {
     ) {
       return NextResponse.json(
         { error: 'Missing required fields: name, email, password, categories' },
+        { status: 400 }
+      );
+    }
+
+    // Validate password requirements (Firebase requires minimum 6 characters)
+    if (password.length < 6) {
+      return NextResponse.json(
+        { error: 'Password must be at least 6 characters long' },
+        { status: 400 }
+      );
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return NextResponse.json(
+        { error: 'Invalid email format' },
         { status: 400 }
       );
     }
@@ -75,6 +99,7 @@ export async function POST(request: NextRequest) {
       stack: err.stack,
     });
 
+    // Handle specific Firebase Auth errors
     if (err.code === 'auth/email-already-exists') {
       return NextResponse.json(
         { error: 'A user with this email already exists' },
@@ -82,8 +107,46 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (err.code === 'auth/weak-password') {
+      return NextResponse.json(
+        { error: 'Password is too weak. Please use at least 6 characters.' },
+        { status: 400 }
+      );
+    }
+
+    if (err.code === 'auth/invalid-email') {
+      return NextResponse.json(
+        { error: 'Invalid email address format' },
+        { status: 400 }
+      );
+    }
+
+    if (err.code === 'auth/operation-not-allowed') {
+      return NextResponse.json(
+        { error: 'Email/password accounts are not enabled' },
+        { status: 500 }
+      );
+    }
+
+    // Handle Firestore errors
+    if (err.code === 'permission-denied') {
+      return NextResponse.json(
+        { error: 'Permission denied. Check Firebase security rules.' },
+        { status: 500 }
+      );
+    }
+
+    // Return detailed error for debugging (only in development)
+    const isDevelopment = process.env.NODE_ENV === 'development';
     return NextResponse.json(
-      { error: 'Failed to create team', details: err.message },
+      {
+        error: 'Failed to create team',
+        details: err.message,
+        ...(isDevelopment && {
+          code: err.code,
+          stack: err.stack,
+        }),
+      },
       { status: 500 }
     );
   }
