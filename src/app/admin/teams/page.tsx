@@ -10,6 +10,7 @@ export default function TeamsPage() {
   const [showForm, setShowForm] = useState(false);
   const [editingTeam, setEditingTeam] = useState<Team | null>(null);
   const [generatingPDF, setGeneratingPDF] = useState(false);
+  const [savingTeam, setSavingTeam] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -35,6 +36,7 @@ export default function TeamsPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSavingTeam(true);
     try {
       if (editingTeam) {
         // Update existing team
@@ -65,6 +67,8 @@ export default function TeamsPage() {
     } catch (error) {
       console.error('Error saving team:', error);
       alert('Error creating team: ' + (error as Error).message);
+    } finally {
+      setSavingTeam(false);
     }
   };
 
@@ -151,14 +155,15 @@ export default function TeamsPage() {
         <div className="flex gap-2">
           <button
             onClick={handleGenerateQRPack}
-            disabled={generatingPDF}
+            disabled={generatingPDF || savingTeam}
             className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 disabled:opacity-50"
           >
             {generatingPDF ? 'Generating...' : 'Generate QR Codes (PDF)'}
           </button>
           <button
             onClick={() => setShowForm(true)}
-            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+            disabled={savingTeam}
+            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50"
           >
             Add Team
           </button>
@@ -181,7 +186,8 @@ export default function TeamsPage() {
                 onChange={e =>
                   setFormData(prev => ({ ...prev, name: e.target.value }))
                 }
-                className="w-full p-2 border rounded text-gray-900"
+                className="w-full p-2 border rounded text-gray-900 disabled:bg-gray-100"
+                disabled={savingTeam}
                 required
               />
             </div>
@@ -195,7 +201,8 @@ export default function TeamsPage() {
                 onChange={e =>
                   setFormData(prev => ({ ...prev, email: e.target.value }))
                 }
-                className="w-full p-2 border rounded text-gray-900"
+                className="w-full p-2 border rounded text-gray-900 disabled:bg-gray-100"
+                disabled={savingTeam}
                 required
               />
             </div>
@@ -209,14 +216,35 @@ export default function TeamsPage() {
                 onChange={e =>
                   setFormData(prev => ({ ...prev, password: e.target.value }))
                 }
-                className="w-full p-2 border rounded text-gray-900"
+                className="w-full p-2 border rounded text-gray-900 disabled:bg-gray-100"
+                disabled={savingTeam}
                 required
               />
             </div>
             <div className="mb-4">
-              <label className="block text-sm font-medium mb-2 text-gray-900">
-                Categories
-              </label>
+              <div className="flex justify-between items-center mb-2">
+                <label className="block text-sm font-medium text-gray-900">
+                  Categories
+                </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const allSelected = categories.every(cat =>
+                      formData.categories.includes(cat)
+                    );
+                    setFormData(prev => ({
+                      ...prev,
+                      categories: allSelected ? [] : [...categories],
+                    }));
+                  }}
+                  disabled={savingTeam}
+                  className="text-sm text-blue-600 hover:text-blue-800 disabled:opacity-50"
+                >
+                  {categories.every(cat => formData.categories.includes(cat))
+                    ? 'Deselect All'
+                    : 'Select All'}
+                </button>
+              </div>
               <div className="grid grid-cols-2 gap-2">
                 {categories.map(category => (
                   <label
@@ -228,6 +256,7 @@ export default function TeamsPage() {
                       checked={formData.categories.includes(category)}
                       onChange={() => handleCategoryToggle(category)}
                       className="mr-2"
+                      disabled={savingTeam}
                     />
                     {category}
                   </label>
@@ -237,9 +266,16 @@ export default function TeamsPage() {
             <div className="flex gap-2">
               <button
                 type="submit"
-                className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+                disabled={savingTeam}
+                className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 disabled:opacity-50"
               >
-                {editingTeam ? 'Update' : 'Create'}
+                {editingTeam
+                  ? savingTeam
+                    ? 'Updating...'
+                    : 'Update'
+                  : savingTeam
+                    ? 'Creating...'
+                    : 'Create'}
               </button>
               <button
                 type="button"
@@ -253,7 +289,8 @@ export default function TeamsPage() {
                     categories: [],
                   });
                 }}
-                className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
+                disabled={savingTeam}
+                className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 disabled:opacity-50"
               >
                 Cancel
               </button>
