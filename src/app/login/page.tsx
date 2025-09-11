@@ -4,6 +4,7 @@ import { signInWithEmailAndPassword } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import { auth } from '@/lib/firebase';
 import { useAuth } from '@/lib/AuthContext';
+import Link from 'next/link';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -115,6 +116,14 @@ export default function LoginPage() {
         >
           {loading ? 'Logging in...' : 'Login'}
         </button>
+        <div className="mt-4 text-center">
+          <Link
+            href="/"
+            className="text-gray-600 hover:text-gray-800 underline"
+          >
+            ← Back to Home
+          </Link>
+        </div>
       </form>
     </main>
   );
