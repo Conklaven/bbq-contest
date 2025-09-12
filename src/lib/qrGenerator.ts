@@ -85,8 +85,11 @@ export async function generateQRPackPDF(): Promise<Uint8Array> {
         const qrY = yPosition - gridRow * 300 - 100; // Start 100px below header, 300px between rows
         const textX = qrX + 120; // Text starts 120px to the right of QR code
 
-        // Generate QR code
-        const qrCodeDataURL = await QRCode.toDataURL(item.itemCode, {
+        // Generate QR code with full URL
+        const baseUrl =
+          process.env.NEXT_PUBLIC_BASE_URL || 'https://your-site.com';
+        const qrUrl = `${baseUrl}/judge/${item.itemCode}`;
+        const qrCodeDataURL = await QRCode.toDataURL(qrUrl, {
           width: 100,
           margin: 2,
         });

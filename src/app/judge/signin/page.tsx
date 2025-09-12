@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { signInAnonymously } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { DatabaseService } from '@/lib/db';
@@ -12,6 +12,8 @@ export default function JudgeSignIn() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const itemCode = searchParams.get('itemCode');
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,8 +65,12 @@ export default function JudgeSignIn() {
         displayName: displayName.trim(),
       });
 
-      // Redirect to judge dashboard
-      router.push('/judge');
+      // Redirect to judge dashboard or specific item if itemCode was provided
+      if (itemCode) {
+        router.push(`/judge/${itemCode}`);
+      } else {
+        router.push('/judge');
+      }
     } catch (err) {
       console.error('Sign-in error:', err);
       setError('Failed to sign in. Please try again.');
@@ -80,6 +86,15 @@ export default function JudgeSignIn() {
           <h1 className="text-3xl font-bold text-center mb-6 text-gray-900">
             Judge Login
           </h1>
+
+          {itemCode && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+              <p className="text-blue-800 text-center font-medium">
+                Ready to judge item:{' '}
+                <span className="font-bold">{itemCode}</span>
+              </p>
+            </div>
+          )}
 
           <p className="text-gray-900 text-center mb-6">
             Enter your name and the judging password to begin judging BBQ items

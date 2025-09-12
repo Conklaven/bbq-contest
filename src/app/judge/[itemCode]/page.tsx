@@ -58,9 +58,9 @@ export default function ScoreForm({ params }: ScoreFormProps) {
   }, [user, itemCode]);
 
   useEffect(() => {
-    // Redirect if not authenticated
+    // Redirect if not authenticated, but preserve the item code
     if (!loading && !user) {
-      router.push('/judge/signin');
+      router.push(`/judge/signin?itemCode=${encodeURIComponent(itemCode)}`);
       return;
     }
 
