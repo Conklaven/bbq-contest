@@ -12,7 +12,7 @@ export default function TestQRCode() {
       const baseUrl =
         typeof window !== 'undefined'
           ? window.location.origin
-          : 'https://your-site.com';
+          : 'https://www.asbeekosherbbqcontest.com';
       const qrUrl = `${baseUrl}/judge/${itemCode}`;
       const url = await QRCode.toDataURL(qrUrl);
       setQrCodeUrl(url);

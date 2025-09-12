@@ -87,7 +87,8 @@ export async function generateQRPackPDF(): Promise<Uint8Array> {
 
         // Generate QR code with full URL
         const baseUrl =
-          process.env.NEXT_PUBLIC_BASE_URL || 'https://your-site.com';
+          process.env.NEXT_PUBLIC_BASE_URL ||
+          'https://www.asbeekosherbbqcontest.com';
         const qrUrl = `${baseUrl}/judge/${item.itemCode}`;
         const qrCodeDataURL = await QRCode.toDataURL(qrUrl, {
           width: 100,
