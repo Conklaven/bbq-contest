@@ -20,6 +20,12 @@ export default function JudgeDashboard() {
   const [selectedCamera, setSelectedCamera] = useState<MediaDeviceInfo | null>(
     null
   );
+  const [isHttps, setIsHttps] = useState<boolean>(false);
+  const [showPermissionHelp, setShowPermissionHelp] = useState<boolean>(false);
+  const [permissionRequested, setPermissionRequested] =
+    useState<boolean>(false);
+  const [showManualInput, setShowManualInput] = useState<boolean>(false);
+  const [manualItemCode, setManualItemCode] = useState<string>('');
 
   // Get stored camera preference
   const getStoredCameraId = () => {
@@ -49,6 +55,67 @@ export default function JudgeDashboard() {
     setIsScanning(false);
   };
 
+  // Handle manual item code submission
+  const handleManualSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (manualItemCode.trim()) {
+      router.push(`/judge/${manualItemCode.trim()}`);
+    }
+  };
+
+  // Check HTTPS requirement
+  const checkHttps = useCallback(() => {
+    if (typeof window !== 'undefined') {
+      const isSecure =
+        window.location.protocol === 'https:' ||
+        window.location.hostname === 'localhost' ||
+        window.location.hostname === '127.0.0.1';
+      setIsHttps(isSecure);
+      return isSecure;
+    }
+    return false;
+  }, []);
+
+  // Request camera permission explicitly
+  const requestCameraPermission = useCallback(async () => {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      throw new Error('Camera access not supported on this device');
+    }
+
+    try {
+      // Try to get a media stream to trigger permission request
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment' }, // Prefer rear camera
+      });
+
+      // Stop the stream immediately as we just wanted to request permission
+      stream.getTracks().forEach(track => track.stop());
+
+      setPermissionRequested(true);
+      return true;
+    } catch (err: unknown) {
+      console.error('Permission request failed:', err);
+
+      if (err instanceof Error && err.name === 'NotAllowedError') {
+        setHasPermission(false);
+        setShowPermissionHelp(true);
+        throw new Error(
+          'Camera permission denied. Please allow camera access in your browser settings.'
+        );
+      } else if (err instanceof Error && err.name === 'NotFoundError') {
+        throw new Error('No camera found on this device.');
+      } else if (err instanceof Error && err.name === 'NotSupportedError') {
+        throw new Error(
+          'Camera access not supported on this device or browser.'
+        );
+      } else {
+        throw new Error(
+          `Camera access failed: ${err instanceof Error ? err.message : 'Unknown error'}`
+        );
+      }
+    }
+  }, []);
+
   // Initialize scanner
   const initializeScanner = useCallback(async () => {
     if (isInitializing || isScanning || scannerRef.current) {
@@ -58,7 +125,20 @@ export default function JudgeDashboard() {
     setIsInitializing(true);
     setError('');
 
+    // Check HTTPS requirement first
+    if (!checkHttps()) {
+      setError(
+        'Camera access requires HTTPS. Please use a secure connection (https://) to access the camera.'
+      );
+      setIsInitializing(false);
+      return;
+    }
+
     try {
+      // Request permission first if not already requested
+      if (!permissionRequested) {
+        await requestCameraPermission();
+      }
       // Get available cameras and prefer rear camera on mobile
       const devices = await navigator.mediaDevices.enumerateDevices();
       const videoDevices = devices.filter(
@@ -235,16 +315,36 @@ export default function JudgeDashboard() {
 
         setIsScanning(true);
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Error initializing scanner:', err);
       setHasPermission(false);
-      setError(
-        'Camera permission denied. Please allow camera access and refresh the page.'
-      );
+
+      if (err instanceof Error && err.message.includes('HTTPS')) {
+        setError(err.message);
+      } else if (
+        err instanceof Error &&
+        (err.name === 'NotAllowedError' || err.message.includes('permission'))
+      ) {
+        setError(
+          'Camera permission denied. Please allow camera access in your browser settings and try again.'
+        );
+        setShowPermissionHelp(true);
+      } else {
+        setError(
+          `Camera initialization failed: ${err instanceof Error ? err.message : 'Unknown error'}`
+        );
+      }
     } finally {
       setIsInitializing(false);
     }
-  }, [router]);
+  }, [
+    router,
+    checkHttps,
+    requestCameraPermission,
+    permissionRequested,
+    isInitializing,
+    isScanning,
+  ]);
 
   // Flip camera function - switch to next available camera
   const flipCamera = async () => {
@@ -275,6 +375,11 @@ export default function JudgeDashboard() {
     }, 1000);
   };
 
+  // Check HTTPS on component mount
+  useEffect(() => {
+    checkHttps();
+  }, [checkHttps]);
+
   // Initialize scanner when user is authenticated
   useEffect(() => {
     if (!loading && !user) {
@@ -282,8 +387,14 @@ export default function JudgeDashboard() {
       return;
     }
 
-    if (user && !isScanning && !scannerRef.current && hasPermission === null) {
-      // Auto-initialize scanner when user is authenticated
+    if (
+      user &&
+      !isScanning &&
+      !scannerRef.current &&
+      hasPermission === null &&
+      isHttps
+    ) {
+      // Auto-initialize scanner when user is authenticated and HTTPS is available
       initializeScanner();
     }
 
@@ -291,7 +402,15 @@ export default function JudgeDashboard() {
     return () => {
       cleanupScanner();
     };
-  }, [user, loading, initializeScanner, router]);
+  }, [
+    user,
+    loading,
+    initializeScanner,
+    router,
+    isHttps,
+    hasPermission,
+    isScanning,
+  ]);
 
   // Auto-retry initialization if permission is granted but scanner failed
   useEffect(() => {
@@ -370,6 +489,23 @@ export default function JudgeDashboard() {
             </p>
           </div>
 
+          {/* HTTPS Warning */}
+          {!isHttps && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+              <h3 className="font-semibold text-yellow-900 mb-2">
+                Secure Connection Required
+              </h3>
+              <p className="text-yellow-800 text-sm mb-4">
+                Camera access requires a secure connection (HTTPS). Please
+                access this site using https:// instead of http://
+              </p>
+              <p className="text-yellow-700 text-xs">
+                If you&apos;re on a local development server, this is expected.
+                For production, ensure your site uses HTTPS.
+              </p>
+            </div>
+          )}
+
           {/* Camera Permission Error */}
           {hasPermission === false && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
@@ -377,12 +513,87 @@ export default function JudgeDashboard() {
                 Camera Access Required
               </h3>
               <p className="text-red-800 text-sm mb-4">{error}</p>
-              <button
-                onClick={initializeScanner}
-                className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition"
-              >
-                Try Again
-              </button>
+
+              {/* Android-specific help */}
+              <div className="bg-red-100 border border-red-300 rounded p-3 mb-4">
+                <h4 className="font-medium text-red-900 mb-2">
+                  Android Users:
+                </h4>
+                <ol className="text-red-800 text-sm space-y-1">
+                  <li>
+                    1. Look for the camera permission popup and tap
+                    &quot;Allow&quot;
+                  </li>
+                  <li>2. If you previously denied permission:</li>
+                  <li className="ml-4">
+                    • Tap the lock icon in your browser&apos;s address bar
+                  </li>
+                  <li className="ml-4">
+                    • Select &quot;Camera&quot; and change to &quot;Allow&quot;
+                  </li>
+                  <li>
+                    3. Or go to Settings → Apps → [Your Browser] → Permissions →
+                    Camera → Allow
+                  </li>
+                </ol>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-2">
+                <button
+                  onClick={initializeScanner}
+                  className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition"
+                >
+                  Try Again
+                </button>
+                <button
+                  onClick={() => setShowPermissionHelp(!showPermissionHelp)}
+                  className="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 transition"
+                >
+                  {showPermissionHelp ? 'Hide' : 'Show'} Detailed Instructions
+                </button>
+                <button
+                  onClick={() => setShowManualInput(!showManualInput)}
+                  className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition"
+                >
+                  {showManualInput ? 'Hide' : 'Use'} Manual Entry
+                </button>
+              </div>
+
+              {/* Detailed permission help */}
+              {showPermissionHelp && (
+                <div className="mt-4 p-3 bg-red-100 border border-red-300 rounded">
+                  <h4 className="font-medium text-red-900 mb-2">
+                    Detailed Instructions:
+                  </h4>
+                  <div className="text-red-800 text-sm space-y-2">
+                    <div>
+                      <strong>Chrome on Android:</strong>
+                      <ul className="ml-4 mt-1 space-y-1">
+                        <li>• Tap the lock icon in the address bar</li>
+                        <li>• Find &quot;Camera&quot; and tap it</li>
+                        <li>• Select &quot;Allow&quot; from the dropdown</li>
+                        <li>• Refresh the page</li>
+                      </ul>
+                    </div>
+                    <div>
+                      <strong>Samsung Internet:</strong>
+                      <ul className="ml-4 mt-1 space-y-1">
+                        <li>• Tap the menu (three dots) → Settings</li>
+                        <li>• Go to Privacy and security → Site permissions</li>
+                        <li>• Find this site and enable camera access</li>
+                      </ul>
+                    </div>
+                    <div>
+                      <strong>Firefox on Android:</strong>
+                      <ul className="ml-4 mt-1 space-y-1">
+                        <li>• Tap the shield icon in the address bar</li>
+                        <li>• Go to Permissions</li>
+                        <li>• Enable camera access for this site</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -457,8 +668,38 @@ export default function JudgeDashboard() {
             </div>
           </div>
 
-          {/* Camera Selection */}
-          {/* Removed camera selection buttons - keeping only flip camera button */}
+          {/* Scanner Controls */}
+          {isScanning && (
+            <div className="text-center mb-6">
+              <button
+                onClick={() => setShowManualInput(!showManualInput)}
+                className="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 transition"
+              >
+                {showManualInput ? 'Hide' : 'Use'} Manual Entry Instead
+              </button>
+            </div>
+          )}
+
+          {/* Manual Permission Request */}
+          {hasPermission === null && !isInitializing && isHttps && (
+            <div className="text-center mb-6">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h3 className="font-semibold text-blue-900 mb-2">
+                  Camera Access Required
+                </h3>
+                <p className="text-blue-800 text-sm mb-4">
+                  Click the button below to request camera access for scanning
+                  QR codes.
+                </p>
+                <button
+                  onClick={initializeScanner}
+                  className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition"
+                >
+                  Enable Camera Access
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Loading State */}
           {isInitializing && (
@@ -466,6 +707,56 @@ export default function JudgeDashboard() {
               <div className="text-lg text-gray-800">
                 Initializing camera...
               </div>
+            </div>
+          )}
+
+          {/* Manual Input Fallback */}
+          {showManualInput && (
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
+              <h3 className="font-semibold text-gray-900 mb-2">
+                Manual Item Code Entry
+              </h3>
+              <p className="text-gray-700 text-sm mb-4">
+                If camera scanning is not working, you can manually enter the
+                item code below.
+              </p>
+              <form onSubmit={handleManualSubmit} className="space-y-4">
+                <div>
+                  <label
+                    htmlFor="manual-code"
+                    className="block text-sm font-medium text-gray-700 mb-2"
+                  >
+                    Item Code
+                  </label>
+                  <input
+                    id="manual-code"
+                    type="text"
+                    value={manualItemCode}
+                    onChange={e =>
+                      setManualItemCode(e.target.value.toUpperCase())
+                    }
+                    placeholder="Enter item code (e.g., BRISKET001)"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    autoComplete="off"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    type="submit"
+                    disabled={!manualItemCode.trim()}
+                    className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition disabled:bg-gray-400 disabled:cursor-not-allowed"
+                  >
+                    Score Item
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowManualInput(false)}
+                    className="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 transition"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
             </div>
           )}
 
@@ -485,6 +776,12 @@ export default function JudgeDashboard() {
                 <li className="text-blue-700 font-medium">
                   • Tap the flip camera button to switch between front and back
                   cameras
+                </li>
+              )}
+              {(hasPermission === false || !isHttps) && (
+                <li className="text-blue-700 font-medium">
+                  • If camera scanning doesn&apos;t work, use the manual entry
+                  option above
                 </li>
               )}
             </ul>
