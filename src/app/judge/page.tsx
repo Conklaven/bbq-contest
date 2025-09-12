@@ -21,7 +21,6 @@ export default function JudgeDashboard() {
     null
   );
   const [isHttps, setIsHttps] = useState<boolean>(false);
-  const [showPermissionHelp, setShowPermissionHelp] = useState<boolean>(false);
   const [permissionRequested, setPermissionRequested] =
     useState<boolean>(false);
   const [showManualInput, setShowManualInput] = useState<boolean>(false);
@@ -98,7 +97,6 @@ export default function JudgeDashboard() {
 
       if (err instanceof Error && err.name === 'NotAllowedError') {
         setHasPermission(false);
-        setShowPermissionHelp(true);
         throw new Error(
           'Camera permission denied. Please allow camera access in your browser settings.'
         );
@@ -328,7 +326,6 @@ export default function JudgeDashboard() {
         setError(
           'Camera permission denied. Please allow camera access in your browser settings and try again.'
         );
-        setShowPermissionHelp(true);
       } else {
         setError(
           `Camera initialization failed: ${err instanceof Error ? err.message : 'Unknown error'}`
@@ -514,30 +511,6 @@ export default function JudgeDashboard() {
               </h3>
               <p className="text-red-800 text-sm mb-4">{error}</p>
 
-              {/* Android-specific help */}
-              <div className="bg-red-100 border border-red-300 rounded p-3 mb-4">
-                <h4 className="font-medium text-red-900 mb-2">
-                  Android Users:
-                </h4>
-                <ol className="text-red-800 text-sm space-y-1">
-                  <li>
-                    1. Look for the camera permission popup and tap
-                    &quot;Allow&quot;
-                  </li>
-                  <li>2. If you previously denied permission:</li>
-                  <li className="ml-4">
-                    • Tap the lock icon in your browser&apos;s address bar
-                  </li>
-                  <li className="ml-4">
-                    • Select &quot;Camera&quot; and change to &quot;Allow&quot;
-                  </li>
-                  <li>
-                    3. Or go to Settings → Apps → [Your Browser] → Permissions →
-                    Camera → Allow
-                  </li>
-                </ol>
-              </div>
-
               <div className="flex flex-col sm:flex-row gap-2">
                 <button
                   onClick={initializeScanner}
@@ -546,54 +519,12 @@ export default function JudgeDashboard() {
                   Try Again
                 </button>
                 <button
-                  onClick={() => setShowPermissionHelp(!showPermissionHelp)}
-                  className="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 transition"
-                >
-                  {showPermissionHelp ? 'Hide' : 'Show'} Detailed Instructions
-                </button>
-                <button
                   onClick={() => setShowManualInput(!showManualInput)}
                   className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition"
                 >
                   {showManualInput ? 'Hide' : 'Use'} Manual Entry
                 </button>
               </div>
-
-              {/* Detailed permission help */}
-              {showPermissionHelp && (
-                <div className="mt-4 p-3 bg-red-100 border border-red-300 rounded">
-                  <h4 className="font-medium text-red-900 mb-2">
-                    Detailed Instructions:
-                  </h4>
-                  <div className="text-red-800 text-sm space-y-2">
-                    <div>
-                      <strong>Chrome on Android:</strong>
-                      <ul className="ml-4 mt-1 space-y-1">
-                        <li>• Tap the lock icon in the address bar</li>
-                        <li>• Find &quot;Camera&quot; and tap it</li>
-                        <li>• Select &quot;Allow&quot; from the dropdown</li>
-                        <li>• Refresh the page</li>
-                      </ul>
-                    </div>
-                    <div>
-                      <strong>Samsung Internet:</strong>
-                      <ul className="ml-4 mt-1 space-y-1">
-                        <li>• Tap the menu (three dots) → Settings</li>
-                        <li>• Go to Privacy and security → Site permissions</li>
-                        <li>• Find this site and enable camera access</li>
-                      </ul>
-                    </div>
-                    <div>
-                      <strong>Firefox on Android:</strong>
-                      <ul className="ml-4 mt-1 space-y-1">
-                        <li>• Tap the shield icon in the address bar</li>
-                        <li>• Go to Permissions</li>
-                        <li>• Enable camera access for this site</li>
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
           )}
 
