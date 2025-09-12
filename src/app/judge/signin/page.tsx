@@ -1,12 +1,12 @@
 'use client';
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { signInAnonymously } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { DatabaseService } from '@/lib/db';
 import Link from 'next/link';
 
-export default function JudgeSignIn() {
+function JudgeSignInForm() {
   const [displayName, setDisplayName] = useState('');
   const [judgePassword, setJudgePassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -165,5 +165,25 @@ export default function JudgeSignIn() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function JudgeSignIn() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 p-8">
+          <div className="w-full max-w-md">
+            <div className="bg-white rounded-lg shadow-md p-8">
+              <div className="text-center">
+                <div className="text-lg text-gray-600">Loading...</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      }
+    >
+      <JudgeSignInForm />
+    </Suspense>
   );
 }
