@@ -117,8 +117,13 @@ export default function ScoreForm({ params }: ScoreFormProps) {
     );
   }
 
+  // Show loading while redirecting to signin
   if (!user) {
-    return null; // Will redirect to signin
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 p-8">
+        <div className="text-lg text-gray-800">Redirecting to login...</div>
+      </div>
+    );
   }
 
   if (error) {
