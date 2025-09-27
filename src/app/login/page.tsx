@@ -63,7 +63,9 @@ export default function LoginPage() {
     setForgotPasswordSuccess('');
 
     try {
-      await sendPasswordResetEmail(auth, email);
+      await sendPasswordResetEmail(auth, email, {
+        url: window.location.origin + '/reset-password',
+      });
       setForgotPasswordSuccess('Password reset email sent! Check your inbox.');
     } catch (err: unknown) {
       const errorMessage =
