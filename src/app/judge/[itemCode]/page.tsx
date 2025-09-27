@@ -19,11 +19,7 @@ export default function ScoreForm({ params }: ScoreFormProps) {
 
   const [item, setItem] = useState<Item | null>(null);
   const [existingScore, setExistingScore] = useState<Score | null>(null);
-  const [scores, setScores] = useState({
-    taste: 5,
-    tenderness: 5,
-    appearance: 5,
-  });
+  const [scores, setScores] = useState<Record<string, number>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -42,6 +38,13 @@ export default function ScoreForm({ params }: ScoreFormProps) {
       }
 
       setItem(itemData);
+
+      // Initialize scores based on item's judging criteria
+      const initialScores: Record<string, number> = {};
+      itemData.judgingCriteria.forEach(criteria => {
+        initialScores[criteria.toLowerCase()] = 5;
+      });
+      setScores(initialScores);
 
       // Check if user has already scored this item
       const judgeScores = await DatabaseService.getScoresByJudge(user.uid);
@@ -70,10 +73,10 @@ export default function ScoreForm({ params }: ScoreFormProps) {
     }
   }, [user, loading, itemCode, router, loadItemAndCheckScore]);
 
-  const handleScoreChange = (category: keyof typeof scores, value: number) => {
+  const handleScoreChange = (criteria: string, value: number) => {
     setScores(prev => ({
       ...prev,
-      [category]: value,
+      [criteria]: value,
     }));
   };
 
@@ -90,9 +93,7 @@ export default function ScoreForm({ params }: ScoreFormProps) {
       await DatabaseService.createScore({
         itemId: item.id,
         judgeId: user.uid,
-        taste: scores.taste,
-        tenderness: scores.tenderness,
-        appearance: scores.appearance,
+        scores: scores,
       });
 
       // Show success message
@@ -219,77 +220,39 @@ export default function ScoreForm({ params }: ScoreFormProps) {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-8">
-            {/* Taste Score */}
-            <div>
-              <label className="block text-lg font-medium text-gray-900 mb-4">
-                Taste: {scores.taste}/10
-              </label>
-              <input
-                type="range"
-                min="1"
-                max="10"
-                value={scores.taste}
-                onChange={e =>
-                  handleScoreChange('taste', parseInt(e.target.value))
-                }
-                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
-                disabled={isSubmitting}
-              />
-              <div className="flex justify-between text-sm text-gray-500 mt-1">
-                <span>Poor</span>
-                <span>Excellent</span>
+            {/* Dynamic Criteria Scores */}
+            {item.judgingCriteria.map(criteria => (
+              <div key={criteria}>
+                <label className="block text-lg font-medium text-gray-900 mb-4">
+                  {criteria}: {scores[criteria.toLowerCase()] || 5}/10
+                </label>
+                <input
+                  type="range"
+                  min="1"
+                  max="10"
+                  value={scores[criteria.toLowerCase()] || 5}
+                  onChange={e =>
+                    handleScoreChange(
+                      criteria.toLowerCase(),
+                      parseInt(e.target.value)
+                    )
+                  }
+                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
+                  disabled={isSubmitting}
+                />
+                <div className="flex justify-between text-sm text-gray-500 mt-1">
+                  <span>Poor</span>
+                  <span>Excellent</span>
+                </div>
               </div>
-            </div>
-
-            {/* Tenderness Score */}
-            <div>
-              <label className="block text-lg font-medium text-gray-900 mb-4">
-                Tenderness: {scores.tenderness}/10
-              </label>
-              <input
-                type="range"
-                min="1"
-                max="10"
-                value={scores.tenderness}
-                onChange={e =>
-                  handleScoreChange('tenderness', parseInt(e.target.value))
-                }
-                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
-                disabled={isSubmitting}
-              />
-              <div className="flex justify-between text-sm text-gray-500 mt-1">
-                <span>Tough</span>
-                <span>Tender</span>
-              </div>
-            </div>
-
-            {/* Appearance Score */}
-            <div>
-              <label className="block text-lg font-medium text-gray-900 mb-4">
-                Appearance: {scores.appearance}/10
-              </label>
-              <input
-                type="range"
-                min="1"
-                max="10"
-                value={scores.appearance}
-                onChange={e =>
-                  handleScoreChange('appearance', parseInt(e.target.value))
-                }
-                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
-                disabled={isSubmitting}
-              />
-              <div className="flex justify-between text-sm text-gray-500 mt-1">
-                <span>Poor</span>
-                <span>Excellent</span>
-              </div>
-            </div>
+            ))}
 
             {/* Total Score Display */}
             <div className="bg-gray-50 rounded-lg p-4 text-center">
               <p className="text-sm text-gray-600">Total Score</p>
               <p className="text-2xl font-bold text-gray-900">
-                {scores.taste + scores.tenderness + scores.appearance}/30
+                {Object.values(scores).reduce((sum, score) => sum + score, 0)}/
+                {item.judgingCriteria.length * 10}
               </p>
             </div>
 

@@ -12,9 +12,7 @@ interface TeamScore {
   scores: Score[];
   totalScore: number;
   averageScore: number;
-  tasteScore: number;
-  tendernessScore: number;
-  appearanceScore: number;
+  criteriaScores: Record<string, number>;
 }
 
 export default function TeamDashboard() {
@@ -72,19 +70,25 @@ export default function TeamDashboard() {
         const scores = itemScoresMap.get(item.id) || [];
         const totalScore = scores.reduce(
           (sum, score) =>
-            sum + score.taste + score.tenderness + score.appearance,
+            sum +
+            Object.values(score.scores).reduce((s, v) => s + (v as number), 0),
           0
         );
         const averageScore = scores.length > 0 ? totalScore / scores.length : 0;
-        const tasteScore =
-          scores.reduce((sum, score) => sum + score.taste, 0) /
-          Math.max(scores.length, 1);
-        const tendernessScore =
-          scores.reduce((sum, score) => sum + score.tenderness, 0) /
-          Math.max(scores.length, 1);
-        const appearanceScore =
-          scores.reduce((sum, score) => sum + score.appearance, 0) /
-          Math.max(scores.length, 1);
+
+        // Calculate average scores for each criteria
+        const criteriaScores: Record<string, number> = {};
+        if (scores.length > 0) {
+          // Get all criteria from the first score (they should all be the same for an item)
+          const criteria = Object.keys(scores[0].scores);
+          criteria.forEach(criteria => {
+            criteriaScores[criteria] =
+              scores.reduce(
+                (sum, score) => sum + ((score.scores[criteria] as number) || 0),
+                0
+              ) / scores.length;
+          });
+        }
 
         return {
           category: item.category,
@@ -92,9 +96,7 @@ export default function TeamDashboard() {
           scores,
           totalScore,
           averageScore,
-          tasteScore,
-          tendernessScore,
-          appearanceScore,
+          criteriaScores,
         };
       });
 
@@ -295,36 +297,23 @@ export default function TeamDashboard() {
                     {/* Score Breakdown */}
                     {categoryScore.scores.length > 0 ? (
                       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
-                        <div className="bg-gray-50 rounded-lg p-4">
-                          <div className="text-sm font-medium text-gray-700">
-                            Taste
-                          </div>
-                          <div className="text-xl font-bold text-green-600">
-                            {settings?.scoresVisible
-                              ? categoryScore.tasteScore.toFixed(2)
-                              : '••••'}
-                          </div>
-                        </div>
-                        <div className="bg-gray-50 rounded-lg p-4">
-                          <div className="text-sm font-medium text-gray-700">
-                            Tenderness
-                          </div>
-                          <div className="text-xl font-bold text-blue-600">
-                            {settings?.scoresVisible
-                              ? categoryScore.tendernessScore.toFixed(2)
-                              : '••••'}
-                          </div>
-                        </div>
-                        <div className="bg-gray-50 rounded-lg p-4">
-                          <div className="text-sm font-medium text-gray-700">
-                            Appearance
-                          </div>
-                          <div className="text-xl font-bold text-purple-600">
-                            {settings?.scoresVisible
-                              ? categoryScore.appearanceScore.toFixed(2)
-                              : '••••'}
-                          </div>
-                        </div>
+                        {Object.entries(categoryScore.criteriaScores).map(
+                          ([criteria, score]) => (
+                            <div
+                              key={criteria}
+                              className="bg-gray-50 rounded-lg p-4"
+                            >
+                              <div className="text-sm font-medium text-gray-700 capitalize">
+                                {criteria}
+                              </div>
+                              <div className="text-xl font-bold text-green-600">
+                                {settings?.scoresVisible
+                                  ? score.toFixed(2)
+                                  : '••••'}
+                              </div>
+                            </div>
+                          )
+                        )}
                         <div className="bg-gray-50 rounded-lg p-4">
                           <div className="text-sm font-medium text-gray-700">
                             Total
@@ -358,16 +347,24 @@ export default function TeamDashboard() {
                               className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium"
                               title={
                                 settings?.scoresVisible
-                                  ? `Judge ${index + 1}: Taste ${score.taste}, Tenderness ${score.tenderness}, Appearance ${score.appearance}`
+                                  ? `Judge ${index + 1}: ${Object.entries(
+                                      score.scores
+                                    )
+                                      .map(
+                                        ([criteria, value]) =>
+                                          `${criteria} ${value}`
+                                      )
+                                      .join(', ')}`
                                   : `Judge ${index + 1}: Score received`
                               }
                             >
                               {settings?.scoresVisible
-                                ? (
-                                    score.taste +
-                                    score.tenderness +
-                                    score.appearance
-                                  ).toFixed(1)
+                                ? Object.values(score.scores)
+                                    .reduce(
+                                      (sum, value) => sum + (value as number),
+                                      0
+                                    )
+                                    .toFixed(1)
                                 : '••••'}
                             </div>
                           ))}

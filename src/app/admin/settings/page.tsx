@@ -5,6 +5,8 @@ import { DatabaseService } from '@/lib/db';
 interface ContestSettings {
   id: string;
   categories: string[];
+  judgingCriteria: string[];
+  categoryJudgingCriteria: Record<string, string[]>;
   contestName: string;
   contestDate: string;
   maxScorePerCategory: number;
@@ -24,6 +26,8 @@ export default function SettingsPage() {
     contestDate: '',
     maxScorePerCategory: 10,
     categories: [] as string[],
+    judgingCriteria: ['Appearance', 'Tenderness', 'Flavor'] as string[],
+    categoryJudgingCriteria: {} as Record<string, string[]>,
     judgingPassword: '',
     scoresVisible: false,
   });
@@ -43,6 +47,14 @@ export default function SettingsPage() {
           contestDate: savedSettings.contestDate,
           maxScorePerCategory: savedSettings.maxScorePerCategory,
           categories: [...savedSettings.categories],
+          judgingCriteria: [
+            ...(savedSettings.judgingCriteria || [
+              'Appearance',
+              'Tenderness',
+              'Flavor',
+            ]),
+          ],
+          categoryJudgingCriteria: { ...savedSettings.categoryJudgingCriteria },
           judgingPassword: savedSettings.judgingPassword || '',
           scoresVisible: savedSettings.scoresVisible ?? false,
         });
@@ -61,6 +73,8 @@ export default function SettingsPage() {
             'Turkey',
             'Sausage',
           ],
+          judgingCriteria: ['Appearance', 'Tenderness', 'Flavor'],
+          categoryJudgingCriteria: {},
           scoresVisible: false,
           createdAt: new Date(),
           updatedAt: new Date(),
@@ -72,6 +86,10 @@ export default function SettingsPage() {
           contestDate: defaultSettings.contestDate,
           maxScorePerCategory: defaultSettings.maxScorePerCategory,
           categories: [...defaultSettings.categories],
+          judgingCriteria: [...defaultSettings.judgingCriteria],
+          categoryJudgingCriteria: {
+            ...defaultSettings.categoryJudgingCriteria,
+          },
           judgingPassword: '',
           scoresVisible: false,
         });
@@ -147,6 +165,23 @@ export default function SettingsPage() {
       ];
     }
     setFormData(prev => ({ ...prev, categories: newCategories }));
+  };
+
+  const toggleCategoryCriteria = (category: string, criteria: string) => {
+    setFormData(prev => {
+      const currentCriteria = prev.categoryJudgingCriteria[category] || [];
+      const newCriteria = currentCriteria.includes(criteria)
+        ? currentCriteria.filter(c => c !== criteria)
+        : [...currentCriteria, criteria];
+
+      return {
+        ...prev,
+        categoryJudgingCriteria: {
+          ...prev.categoryJudgingCriteria,
+          [category]: newCriteria,
+        },
+      };
+    });
   };
 
   if (loading) {
@@ -353,6 +388,75 @@ export default function SettingsPage() {
               {formData.categories.length === 0 && (
                 <p className="text-gray-600 text-sm">
                   No categories added yet. Add at least one category.
+                </p>
+              )}
+            </div>
+
+            <div className="mb-6">
+              <label className="block text-sm font-medium mb-2 text-gray-900">
+                Judging Criteria Configuration
+              </label>
+              <p className="text-sm text-gray-600 mb-4">
+                Configure which judging criteria apply to each category. Each
+                category can have different criteria.
+              </p>
+
+              {formData.categories.length > 0 ? (
+                <div className="space-y-4">
+                  {formData.categories.map(category => (
+                    <div key={category} className="border rounded-lg p-4">
+                      <h4 className="font-medium text-gray-900 mb-3">
+                        {category}
+                      </h4>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        {formData.judgingCriteria.map(criteria => (
+                          <label
+                            key={criteria}
+                            className="flex items-center cursor-pointer"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={
+                                formData.categoryJudgingCriteria[
+                                  category
+                                ]?.includes(criteria) || false
+                              }
+                              onChange={() =>
+                                toggleCategoryCriteria(category, criteria)
+                              }
+                              className="sr-only"
+                            />
+                            <div
+                              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                                formData.categoryJudgingCriteria[
+                                  category
+                                ]?.includes(criteria)
+                                  ? 'bg-green-600'
+                                  : 'bg-gray-200'
+                              }`}
+                            >
+                              <span
+                                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                                  formData.categoryJudgingCriteria[
+                                    category
+                                  ]?.includes(criteria)
+                                    ? 'translate-x-6'
+                                    : 'translate-x-1'
+                                }`}
+                              />
+                            </div>
+                            <span className="ml-3 text-sm text-gray-700">
+                              {criteria}
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-600 text-sm">
+                  Add categories first to configure judging criteria.
                 </p>
               )}
             </div>

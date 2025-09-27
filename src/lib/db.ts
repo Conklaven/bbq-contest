@@ -32,6 +32,7 @@ export interface Item {
   teamId: string;
   category: string;
   itemCode: string;
+  judgingCriteria: string[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -47,9 +48,7 @@ export interface Score {
   id: string;
   itemId: string;
   judgeId: string;
-  taste: number;
-  tenderness: number;
-  appearance: number;
+  scores: Record<string, number>;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -60,6 +59,8 @@ export interface ContestSettings {
   contestDate: string;
   maxScorePerCategory: number;
   categories: string[];
+  judgingCriteria: string[];
+  categoryJudgingCriteria: Record<string, string[]>;
   judgingPassword?: string;
   scoresVisible: boolean;
   createdAt: Date;
@@ -104,6 +105,7 @@ export const itemConverter = {
     teamId: item.teamId,
     category: item.category,
     itemCode: item.itemCode,
+    judgingCriteria: item.judgingCriteria,
     createdAt: item.createdAt,
     updatedAt: item.updatedAt,
   }),
@@ -114,6 +116,7 @@ export const itemConverter = {
       teamId: data?.teamId || '',
       category: data?.category || '',
       itemCode: data?.itemCode || '',
+      judgingCriteria: data?.judgingCriteria || [],
       createdAt: data?.createdAt?.toDate() || new Date(),
       updatedAt: data?.updatedAt?.toDate() || new Date(),
     };
@@ -141,9 +144,7 @@ export const scoreConverter = {
   toFirestore: (score: Omit<Score, 'id'>): DocumentData => ({
     itemId: score.itemId,
     judgeId: score.judgeId,
-    taste: score.taste,
-    tenderness: score.tenderness,
-    appearance: score.appearance,
+    scores: score.scores,
     createdAt: score.createdAt,
     updatedAt: score.updatedAt,
   }),
@@ -153,9 +154,7 @@ export const scoreConverter = {
       id: snapshot.id,
       itemId: data?.itemId || '',
       judgeId: data?.judgeId || '',
-      taste: data?.taste || 0,
-      tenderness: data?.tenderness || 0,
-      appearance: data?.appearance || 0,
+      scores: data?.scores || {},
       createdAt: data?.createdAt?.toDate() || new Date(),
       updatedAt: data?.updatedAt?.toDate() || new Date(),
     };
@@ -168,6 +167,8 @@ export const settingsConverter = {
     contestDate: settings.contestDate,
     maxScorePerCategory: settings.maxScorePerCategory,
     categories: settings.categories,
+    judgingCriteria: settings.judgingCriteria,
+    categoryJudgingCriteria: settings.categoryJudgingCriteria,
     judgingPassword: settings.judgingPassword || '',
     scoresVisible: settings.scoresVisible,
     createdAt: settings.createdAt,
@@ -181,6 +182,12 @@ export const settingsConverter = {
       contestDate: data?.contestDate || '',
       maxScorePerCategory: data?.maxScorePerCategory || 10,
       categories: data?.categories || [],
+      judgingCriteria: data?.judgingCriteria || [
+        'Appearance',
+        'Tenderness',
+        'Flavor',
+      ],
+      categoryJudgingCriteria: data?.categoryJudgingCriteria || {},
       judgingPassword: data?.judgingPassword || '',
       scoresVisible: data?.scoresVisible ?? false,
       createdAt: data?.createdAt?.toDate() || new Date(),

@@ -79,8 +79,10 @@ export default function ScoreboardPage() {
               // Add to overall team score
               const teamScore = teamScoreMap.get(teamId);
               if (teamScore) {
-                const scoreValue =
-                  score.taste + score.tenderness + score.appearance;
+                const scoreValue = Object.values(score.scores).reduce(
+                  (sum, value) => sum + (value as number),
+                  0
+                );
                 teamScore.scores.push(score);
                 teamScore.totalScore += scoreValue;
                 teamScore.averageScore =
@@ -103,8 +105,10 @@ export default function ScoreboardPage() {
                   categoryScoreMap.set(categoryKey, categoryScore);
                 }
 
-                const scoreValue =
-                  score.taste + score.tenderness + score.appearance;
+                const scoreValue = Object.values(score.scores).reduce(
+                  (sum, value) => sum + (value as number),
+                  0
+                );
                 categoryScore.scores.push(score);
                 categoryScore.totalScore += scoreValue;
                 categoryScore.averageScore =
@@ -235,7 +239,10 @@ export default function ScoreboardPage() {
   };
 
   const getScoreValue = (score: Score) => {
-    return score.taste + score.tenderness + score.appearance;
+    return Object.values(score.scores).reduce(
+      (sum, value) => sum + (value as number),
+      0
+    );
   };
 
   if (loading) {
@@ -434,7 +441,14 @@ export default function ScoreboardPage() {
                               <span
                                 key={score.id}
                                 className="inline-block w-8 h-6 bg-blue-100 text-blue-800 text-xs rounded flex items-center justify-center"
-                                title={`${getScoreValue(score)} - ${score.taste}/${score.tenderness}/${score.appearance}`}
+                                title={`${getScoreValue(score)} - ${Object.entries(
+                                  score.scores
+                                )
+                                  .map(
+                                    ([criteria, value]) =>
+                                      `${criteria}:${value}`
+                                  )
+                                  .join('/')}`}
                               >
                                 {getScoreValue(score)}
                               </span>
@@ -496,7 +510,14 @@ export default function ScoreboardPage() {
                               <span
                                 key={score.id}
                                 className="inline-block w-8 h-6 bg-blue-100 text-blue-800 text-xs rounded flex items-center justify-center"
-                                title={`${getScoreValue(score)} - ${score.taste}/${score.tenderness}/${score.appearance}`}
+                                title={`${getScoreValue(score)} - ${Object.entries(
+                                  score.scores
+                                )
+                                  .map(
+                                    ([criteria, value]) =>
+                                      `${criteria}:${value}`
+                                  )
+                                  .join('/')}`}
                               >
                                 {getScoreValue(score)}
                               </span>

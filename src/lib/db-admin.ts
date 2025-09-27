@@ -16,6 +16,7 @@ export interface Item {
   teamId: string;
   category: string;
   itemCode: string;
+  judgingCriteria: string[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -31,9 +32,7 @@ export interface Score {
   id: string;
   itemId: string;
   judgeId: string;
-  taste: number;
-  tenderness: number;
-  appearance: number;
+  scores: Record<string, number>;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -44,6 +43,8 @@ export interface ContestSettings {
   contestDate: string;
   maxScorePerCategory: number;
   categories: string[];
+  judgingCriteria: string[];
+  categoryJudgingCriteria: Record<string, string[]>;
   judgingPassword?: string;
   scoresVisible: boolean;
   createdAt: Date;

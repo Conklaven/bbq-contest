@@ -146,6 +146,7 @@ export async function generateQRPackPDF(): Promise<Uint8Array> {
 async function createItemsForTeams(teams: Team[]): Promise<void> {
   try {
     const existingItems = await DatabaseService.getItems();
+    const settings = await DatabaseService.getSettings();
     console.log(`Found ${existingItems.length} existing items`);
     console.log(`Processing ${teams.length} teams`);
 
@@ -166,11 +167,16 @@ async function createItemsForTeams(teams: Team[]): Promise<void> {
           // Generate unique item code
           const itemCode = generateUniqueItemCode(existingItems);
 
+          // Get judging criteria for this category
+          const judgingCriteria = settings?.categoryJudgingCriteria[category] ||
+            settings?.judgingCriteria || ['Appearance', 'Tenderness', 'Flavor'];
+
           // Create new item
           await DatabaseService.createItem({
             teamId: team.id,
             category: category,
             itemCode: itemCode,
+            judgingCriteria: judgingCriteria,
           });
 
           // Add to existing items array for next iteration
@@ -179,13 +185,14 @@ async function createItemsForTeams(teams: Team[]): Promise<void> {
             teamId: team.id,
             category: category,
             itemCode: itemCode,
+            judgingCriteria: judgingCriteria,
             createdAt: new Date(),
             updatedAt: new Date(),
           });
 
           createdCount++;
           console.log(
-            `Created item: ${itemCode} for ${team.name} - ${category}`
+            `Created item: ${itemCode} for ${team.name} - ${category} with criteria: ${judgingCriteria.join(', ')}`
           );
         } else {
           console.log(
@@ -226,7 +233,7 @@ function generateUniqueItemCode(existingItems: Item[]): string {
 }
 
 export function downloadPDF(pdfBytes: Uint8Array, filename: string): void {
-  const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+  const blob = new Blob([pdfBytes as BlobPart], { type: 'application/pdf' });
   const url = window.URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
