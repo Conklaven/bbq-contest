@@ -93,6 +93,16 @@ export default function TeamsPage() {
     }));
   };
 
+  const generatePassword = () => {
+    const chars =
+      'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
+    let password = '';
+    for (let i = 0; i < 10; i++) {
+      password += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    setFormData(prev => ({ ...prev, password }));
+  };
+
   const editTeam = (team: Team) => {
     setEditingTeam(team);
     setFormData({
@@ -207,9 +217,19 @@ export default function TeamsPage() {
               />
             </div>
             <div className="mb-4">
-              <label className="block text-sm font-medium mb-2 text-gray-900">
-                Password
-              </label>
+              <div className="flex justify-between items-center mb-2">
+                <label className="block text-sm font-medium text-gray-900">
+                  Password
+                </label>
+                <button
+                  type="button"
+                  onClick={generatePassword}
+                  disabled={savingTeam}
+                  className="text-sm text-blue-600 hover:text-blue-800 disabled:opacity-50"
+                >
+                  Generate Random
+                </button>
+              </div>
               <input
                 type="password"
                 value={formData.password}
@@ -219,6 +239,7 @@ export default function TeamsPage() {
                 className="w-full p-2 border rounded text-gray-900 disabled:bg-gray-100"
                 disabled={savingTeam}
                 required
+                placeholder="Enter password or click 'Generate Random'"
               />
             </div>
             <div className="mb-4">

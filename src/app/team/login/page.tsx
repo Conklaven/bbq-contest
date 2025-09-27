@@ -5,6 +5,7 @@ import {
   isSignInWithEmailLink,
   signInWithEmailLink,
   signInWithEmailAndPassword,
+  sendPasswordResetEmail,
 } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import { auth } from '@/lib/firebase';
@@ -21,6 +22,8 @@ export default function TeamLoginPage() {
   const [loginMethod, setLoginMethod] = useState<'magic-link' | 'password'>(
     'magic-link'
   );
+  const [forgotPasswordLoading, setForgotPasswordLoading] = useState(false);
+  const [forgotPasswordSuccess, setForgotPasswordSuccess] = useState('');
   const router = useRouter();
   const { user, claims, loading: authLoading } = useAuth();
 
@@ -145,6 +148,30 @@ export default function TeamLoginPage() {
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    if (!email.trim()) {
+      setError('Please enter your email address first');
+      return;
+    }
+
+    setForgotPasswordLoading(true);
+    setError('');
+    setForgotPasswordSuccess('');
+
+    try {
+      await sendPasswordResetEmail(auth, email);
+      setForgotPasswordSuccess('Password reset email sent! Check your inbox.');
+    } catch (err: unknown) {
+      const errorMessage =
+        err instanceof Error
+          ? err.message
+          : 'Failed to send password reset email';
+      setError(errorMessage);
+    } finally {
+      setForgotPasswordLoading(false);
     }
   };
 
@@ -294,9 +321,29 @@ export default function TeamLoginPage() {
               />
             </div>
 
+            {/* Forgot Password Link */}
+            <div className="mb-4 text-right">
+              <button
+                type="button"
+                onClick={handleForgotPassword}
+                disabled={forgotPasswordLoading || loading}
+                className="text-sm text-blue-600 hover:text-blue-800 disabled:opacity-50"
+              >
+                {forgotPasswordLoading ? 'Sending...' : 'Forgot Password?'}
+              </button>
+            </div>
+
             {error && (
               <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
                 <div className="text-red-600 text-sm">{error}</div>
+              </div>
+            )}
+
+            {forgotPasswordSuccess && (
+              <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-md">
+                <div className="text-green-600 text-sm">
+                  {forgotPasswordSuccess}
+                </div>
               </div>
             )}
 

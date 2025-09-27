@@ -1,6 +1,9 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import {
+  signInWithEmailAndPassword,
+  sendPasswordResetEmail,
+} from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import { auth } from '@/lib/firebase';
 import { useAuth } from '@/lib/AuthContext';
@@ -15,6 +18,8 @@ export default function LoginPage() {
   const [loginMethod, setLoginMethod] = useState<'password' | 'magic-link'>(
     'password'
   );
+  const [forgotPasswordLoading, setForgotPasswordLoading] = useState(false);
+  const [forgotPasswordSuccess, setForgotPasswordSuccess] = useState('');
   const router = useRouter();
   const { user, claims, loading: authLoading } = useAuth();
 
@@ -44,6 +49,30 @@ export default function LoginPage() {
       setError(err instanceof Error ? err.message : 'Login failed');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    if (!email.trim()) {
+      setError('Please enter your email address first');
+      return;
+    }
+
+    setForgotPasswordLoading(true);
+    setError('');
+    setForgotPasswordSuccess('');
+
+    try {
+      await sendPasswordResetEmail(auth, email);
+      setForgotPasswordSuccess('Password reset email sent! Check your inbox.');
+    } catch (err: unknown) {
+      const errorMessage =
+        err instanceof Error
+          ? err.message
+          : 'Failed to send password reset email';
+      setError(errorMessage);
+    } finally {
+      setForgotPasswordLoading(false);
     }
   };
 
@@ -143,7 +172,26 @@ export default function LoginPage() {
                 required
               />
             </div>
+
+            {/* Forgot Password Link */}
+            <div className="mb-4 text-right">
+              <button
+                type="button"
+                onClick={handleForgotPassword}
+                disabled={forgotPasswordLoading || loading}
+                className="text-sm text-blue-600 hover:text-blue-800 disabled:opacity-50"
+              >
+                {forgotPasswordLoading ? 'Sending...' : 'Forgot Password?'}
+              </button>
+            </div>
+
             {error && <div className="text-red-600 mb-4">{error}</div>}
+            {forgotPasswordSuccess && (
+              <div className="text-green-600 mb-4 text-sm">
+                {forgotPasswordSuccess}
+              </div>
+            )}
+
             <button
               type="submit"
               className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
