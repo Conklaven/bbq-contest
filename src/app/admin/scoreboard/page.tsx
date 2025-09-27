@@ -24,9 +24,21 @@ export default function ScoreboardPage() {
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState<'total' | 'average'>('total');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [viewMode, setViewMode] = useState<'overall' | 'category'>('overall');
   const [categories, setCategories] = useState<string[]>([]);
+
+  // Update sorting when view mode changes
+  const handleViewModeChange = (mode: 'overall' | 'category') => {
+    setViewMode(mode);
+    if (mode === 'category') {
+      setSortBy('average');
+      setSortOrder('desc');
+    } else {
+      setSortBy('total');
+      setSortOrder('desc');
+    }
+  };
 
   useEffect(() => {
     const loadScoreboard = async () => {
@@ -53,19 +65,12 @@ export default function ScoreboardPage() {
         const contestCategories = settings?.categories || [];
         setCategories(contestCategories);
 
-        // Calculate overall team scores
-        const teamScoreMap = new Map<string, TeamScore>();
+        // Set the first category as selected if none is selected
+        if (!selectedCategory && contestCategories.length > 0) {
+          setSelectedCategory(contestCategories[0]);
+        }
 
-        teams.forEach(team => {
-          teamScoreMap.set(team.id, {
-            team,
-            scores: [],
-            totalScore: 0,
-            averageScore: 0,
-          });
-        });
-
-        // Calculate category-specific scores (only for contest categories)
+        // Calculate category-specific scores first (only for contest categories)
         const categoryScoreMap = new Map<string, CategoryScore>();
 
         scores.forEach(score => {
@@ -76,19 +81,6 @@ export default function ScoreboardPage() {
           if (teamId && category && itemCode) {
             const team = teams.find(t => t.id === teamId);
             if (team) {
-              // Add to overall team score
-              const teamScore = teamScoreMap.get(teamId);
-              if (teamScore) {
-                const scoreValue = Object.values(score.scores).reduce(
-                  (sum, value) => sum + (value as number),
-                  0
-                );
-                teamScore.scores.push(score);
-                teamScore.totalScore += scoreValue;
-                teamScore.averageScore =
-                  teamScore.totalScore / teamScore.scores.length;
-              }
-
               // Only add to category score if it's a contest category
               if (contestCategories.includes(category)) {
                 const categoryKey = `${teamId}-${category}`;
@@ -116,6 +108,38 @@ export default function ScoreboardPage() {
               }
             }
           }
+        });
+
+        // Calculate overall team scores based on category averages
+        const teamScoreMap = new Map<string, TeamScore>();
+
+        teams.forEach(team => {
+          // Get all category scores for this team
+          const teamCategoryScores = Array.from(
+            categoryScoreMap.values()
+          ).filter(cs => cs.team.id === team.id);
+
+          // Calculate overall score as sum of category averages
+          const overallScore = teamCategoryScores.reduce(
+            (sum, cs) => sum + cs.averageScore,
+            0
+          );
+
+          // Get all individual scores for this team (for display purposes)
+          const allTeamScores = scores.filter(score => {
+            const scoreTeamId = itemTeamMap.get(score.itemId);
+            return scoreTeamId === team.id;
+          });
+
+          teamScoreMap.set(team.id, {
+            team,
+            scores: allTeamScores,
+            totalScore: overallScore, // This is now the sum of category averages
+            averageScore:
+              teamCategoryScores.length > 0
+                ? overallScore / teamCategoryScores.length
+                : 0, // Average of category averages
+          });
         });
 
         // Sort overall team scores
@@ -158,9 +182,9 @@ export default function ScoreboardPage() {
       const headers = [
         'Rank',
         'Team Name',
-        'Total Score',
-        'Average Score',
-        'Number of Scores',
+        'Total Score (Sum of Category Averages)',
+        'Average Score (Average of Category Averages)',
+        'Number of Individual Scores',
       ];
       const csvData = teamScores.map((teamScore, index) => [
         index + 1,
@@ -186,10 +210,9 @@ export default function ScoreboardPage() {
       window.URL.revokeObjectURL(url);
     } else {
       // Export category scores
-      const filteredCategoryScores =
-        selectedCategory === 'all'
-          ? categoryScores
-          : categoryScores.filter(score => score.category === selectedCategory);
+      const filteredCategoryScores = categoryScores.filter(
+        score => score.category === selectedCategory
+      );
 
       const headers = [
         'Rank',
@@ -219,8 +242,7 @@ export default function ScoreboardPage() {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      const categoryName =
-        selectedCategory === 'all' ? 'all-categories' : selectedCategory;
+      const categoryName = selectedCategory;
       a.download = `bbq-contest-${categoryName}-scores-${new Date().toISOString().split('T')[0]}.csv`;
       document.body.appendChild(a);
       a.click();
@@ -270,7 +292,7 @@ export default function ScoreboardPage() {
         <div className="border-b border-gray-200">
           <nav className="-mb-px flex">
             <button
-              onClick={() => setViewMode('overall')}
+              onClick={() => handleViewModeChange('overall')}
               className={`py-2 px-4 border-b-2 font-medium text-sm ${
                 viewMode === 'overall'
                   ? 'border-blue-500 text-blue-600'
@@ -280,7 +302,7 @@ export default function ScoreboardPage() {
               Overall Team Rankings
             </button>
             <button
-              onClick={() => setViewMode('category')}
+              onClick={() => handleViewModeChange('category')}
               className={`py-2 px-4 border-b-2 font-medium text-sm ${
                 viewMode === 'category'
                   ? 'border-blue-500 text-blue-600'
@@ -301,16 +323,6 @@ export default function ScoreboardPage() {
               Filter by Category
             </h3>
             <div className="flex flex-wrap gap-2">
-              <button
-                onClick={() => setSelectedCategory('all')}
-                className={`px-3 py-1 rounded text-sm ${
-                  selectedCategory === 'all'
-                    ? 'bg-blue-100 text-blue-800'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                All Categories
-              </button>
               {categories.map(category => (
                 <button
                   key={category}
@@ -335,7 +347,7 @@ export default function ScoreboardPage() {
             <h3 className="text-lg font-medium text-gray-900">
               {viewMode === 'overall'
                 ? 'Team Rankings'
-                : `${selectedCategory === 'all' ? 'All Categories' : selectedCategory} Rankings`}
+                : `${selectedCategory} Rankings`}
             </h3>
             <div className="flex gap-2">
               <button
@@ -346,7 +358,9 @@ export default function ScoreboardPage() {
                     : 'bg-gray-100 text-gray-700'
                 }`}
               >
-                Total Score{' '}
+                {viewMode === 'overall'
+                  ? 'Sum of Category Averages'
+                  : 'Total Score'}{' '}
                 {sortBy === 'total' && (sortOrder === 'desc' ? '↓' : '↑')}
               </button>
               <button
@@ -357,7 +371,9 @@ export default function ScoreboardPage() {
                     : 'bg-gray-100 text-gray-700'
                 }`}
               >
-                Average Score{' '}
+                {viewMode === 'overall'
+                  ? 'Avg of Category Averages'
+                  : 'Average Score'}{' '}
                 {sortBy === 'average' && (sortOrder === 'desc' ? '↓' : '↑')}
               </button>
             </div>
@@ -384,10 +400,14 @@ export default function ScoreboardPage() {
                   </th>
                 )}
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                  Total Score
+                  {viewMode === 'overall'
+                    ? 'Total Score (Sum of Category Averages)'
+                    : 'Total Score'}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                  Average Score
+                  {viewMode === 'overall'
+                    ? 'Average Score (Avg of Category Averages)'
+                    : 'Average Score'}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
                   Scores Count
@@ -458,74 +478,71 @@ export default function ScoreboardPage() {
                     </tr>
                   ))
                 : // Category rankings
-                  (selectedCategory === 'all'
-                    ? categoryScores
-                    : categoryScores.filter(
-                        score => score.category === selectedCategory
-                      )
-                  ).map((categoryScore, index) => (
-                    <tr
-                      key={`${categoryScore.team.id}-${categoryScore.category}`}
-                      className={index < 3 ? 'bg-yellow-50' : ''}
-                    >
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        <span
-                          className={`inline-flex items-center justify-center w-8 h-8 rounded-full ${
-                            index === 0
-                              ? 'bg-yellow-400'
-                              : index === 1
-                                ? 'bg-gray-300'
-                                : index === 2
-                                  ? 'bg-orange-400'
-                                  : 'bg-gray-100'
-                          }`}
-                        >
-                          {index + 1}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {categoryScore.team.name}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
-                        {categoryScore.category}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800 font-mono">
-                        {categoryScore.itemCode}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
-                        {categoryScore.totalScore.toFixed(2)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
-                        {categoryScore.averageScore.toFixed(2)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
-                        {categoryScore.scores.length}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-800">
-                        <div className="flex gap-1">
-                          {categoryScore.scores
-                            .slice(-5)
-                            .reverse()
-                            .map(score => (
-                              <span
-                                key={score.id}
-                                className="inline-block w-8 h-6 bg-blue-100 text-blue-800 text-xs rounded flex items-center justify-center"
-                                title={`${getScoreValue(score)} - ${Object.entries(
-                                  score.scores
-                                )
-                                  .map(
-                                    ([criteria, value]) =>
-                                      `${criteria}:${value}`
+                  categoryScores
+                    .filter(score => score.category === selectedCategory)
+                    .map((categoryScore, index) => (
+                      <tr
+                        key={`${categoryScore.team.id}-${categoryScore.category}`}
+                        className={index < 3 ? 'bg-yellow-50' : ''}
+                      >
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          <span
+                            className={`inline-flex items-center justify-center w-8 h-8 rounded-full ${
+                              index === 0
+                                ? 'bg-yellow-400'
+                                : index === 1
+                                  ? 'bg-gray-300'
+                                  : index === 2
+                                    ? 'bg-orange-400'
+                                    : 'bg-gray-100'
+                            }`}
+                          >
+                            {index + 1}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          {categoryScore.team.name}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
+                          {categoryScore.category}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800 font-mono">
+                          {categoryScore.itemCode}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
+                          {categoryScore.totalScore.toFixed(2)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
+                          {categoryScore.averageScore.toFixed(2)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
+                          {categoryScore.scores.length}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-800">
+                          <div className="flex gap-1">
+                            {categoryScore.scores
+                              .slice(-5)
+                              .reverse()
+                              .map(score => (
+                                <span
+                                  key={score.id}
+                                  className="inline-block w-8 h-6 bg-blue-100 text-blue-800 text-xs rounded flex items-center justify-center"
+                                  title={`${getScoreValue(score)} - ${Object.entries(
+                                    score.scores
                                   )
-                                  .join('/')}`}
-                              >
-                                {getScoreValue(score)}
-                              </span>
-                            ))}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                                    .map(
+                                      ([criteria, value]) =>
+                                        `${criteria}:${value}`
+                                    )
+                                    .join('/')}`}
+                                >
+                                  {getScoreValue(score)}
+                                </span>
+                              ))}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
             </tbody>
           </table>
         </div>
@@ -537,11 +554,9 @@ export default function ScoreboardPage() {
               <div className="text-2xl font-bold text-blue-600">
                 {viewMode === 'overall'
                   ? teamScores.length
-                  : selectedCategory === 'all'
-                    ? categoryScores.length
-                    : categoryScores.filter(
-                        score => score.category === selectedCategory
-                      ).length}
+                  : categoryScores.filter(
+                      score => score.category === selectedCategory
+                    ).length}
               </div>
               <div className="text-sm text-gray-700">
                 {viewMode === 'overall' ? 'Total Teams' : 'Total Entries'}
@@ -554,14 +569,9 @@ export default function ScoreboardPage() {
                       (sum, team) => sum + team.scores.length,
                       0
                     )
-                  : selectedCategory === 'all'
-                    ? categoryScores.reduce(
-                        (sum, score) => sum + score.scores.length,
-                        0
-                      )
-                    : categoryScores
-                        .filter(score => score.category === selectedCategory)
-                        .reduce((sum, score) => sum + score.scores.length, 0)}
+                  : categoryScores
+                      .filter(score => score.category === selectedCategory)
+                      .reduce((sum, score) => sum + score.scores.length, 0)}
               </div>
               <div className="text-sm text-gray-700">Total Scores</div>
             </div>
@@ -577,12 +587,9 @@ export default function ScoreboardPage() {
                       ).toFixed(2)
                     : '0.00'
                   : (() => {
-                      const filteredScores =
-                        selectedCategory === 'all'
-                          ? categoryScores
-                          : categoryScores.filter(
-                              score => score.category === selectedCategory
-                            );
+                      const filteredScores = categoryScores.filter(
+                        score => score.category === selectedCategory
+                      );
                       return filteredScores.length > 0
                         ? (
                             filteredScores.reduce(
