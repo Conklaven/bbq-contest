@@ -139,7 +139,7 @@ export default function ScoreForm({ params }: ScoreFormProps) {
             onClick={() => router.push('/judge')}
             className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition"
           >
-            Back to Scanner
+            Back to Dashboard
           </button>
         </div>
       </div>
@@ -155,7 +155,7 @@ export default function ScoreForm({ params }: ScoreFormProps) {
             onClick={() => router.push('/judge')}
             className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition"
           >
-            Back to Scanner
+            Back to Dashboard
           </button>
         </div>
       </div>
@@ -177,7 +177,7 @@ export default function ScoreForm({ params }: ScoreFormProps) {
             onClick={() => router.push('/judge')}
             className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition"
           >
-            Back to Scanner
+            Back to Dashboard
           </button>
         </div>
       </div>
@@ -202,7 +202,7 @@ export default function ScoreForm({ params }: ScoreFormProps) {
               onClick={() => router.push('/judge')}
               className="text-blue-600 hover:text-blue-800 text-sm"
             >
-              ← Back to Scanner
+              ← Back to Dashboard
             </button>
           </div>
         </div>
