@@ -300,6 +300,17 @@ export class DatabaseService {
     });
   }
 
+  static async updateItemJudgingCriteria(
+    itemId: string,
+    judgingCriteria: string[]
+  ): Promise<void> {
+    const itemRef = doc(db, COLLECTIONS.ITEMS, itemId);
+    await updateDoc(itemRef, {
+      judgingCriteria,
+      updatedAt: new Date(),
+    });
+  }
+
   // Judges
   static async getJudges(): Promise<Judge[]> {
     const judgesRef = collection(db, COLLECTIONS.JUDGES).withConverter(

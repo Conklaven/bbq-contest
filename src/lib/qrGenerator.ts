@@ -1,6 +1,6 @@
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import QRCode from 'qrcode';
-import { DatabaseService, Team, Item } from '@/lib/db';
+import { DatabaseService, Team, Item, ContestSettings } from '@/lib/db';
 
 export async function generateQRPackPDF(): Promise<Uint8Array> {
   try {
@@ -150,6 +150,9 @@ async function createItemsForTeams(teams: Team[]): Promise<void> {
     console.log(`Found ${existingItems.length} existing items`);
     console.log(`Processing ${teams.length} teams`);
 
+    // First, fix any existing items that might have incorrect judging criteria
+    await fixExistingItemsJudgingCriteria(existingItems, settings);
+
     let createdCount = 0;
 
     for (const team of teams) {
@@ -168,8 +171,30 @@ async function createItemsForTeams(teams: Team[]): Promise<void> {
           const itemCode = generateUniqueItemCode(existingItems);
 
           // Get judging criteria for this category
-          const judgingCriteria = settings?.categoryJudgingCriteria[category] ||
-            settings?.judgingCriteria || ['Appearance', 'Tenderness', 'Flavor'];
+          let judgingCriteria: string[];
+          if (
+            settings?.categoryJudgingCriteria &&
+            settings.categoryJudgingCriteria[category]
+          ) {
+            // Use category-specific criteria if configured
+            judgingCriteria = settings.categoryJudgingCriteria[category];
+          } else if (
+            settings?.judgingCriteria &&
+            settings.judgingCriteria.length > 0
+          ) {
+            // Use global judging criteria if no category-specific ones
+            judgingCriteria = settings.judgingCriteria;
+          } else {
+            // Fallback to default criteria
+            judgingCriteria = ['Appearance', 'Tenderness', 'Flavor'];
+          }
+
+          console.log(`Settings for category ${category}:`, {
+            hasSettings: !!settings,
+            categoryCriteria: settings?.categoryJudgingCriteria?.[category],
+            globalCriteria: settings?.judgingCriteria,
+            finalCriteria: judgingCriteria,
+          });
 
           // Create new item
           await DatabaseService.createItem({
@@ -230,6 +255,44 @@ function generateUniqueItemCode(existingItems: Item[]): string {
   }
 
   throw new Error('Unable to generate unique item code after 100 attempts');
+}
+
+async function fixExistingItemsJudgingCriteria(
+  items: Item[],
+  settings: ContestSettings | null
+): Promise<void> {
+  console.log('Checking existing items for correct judging criteria...');
+
+  for (const item of items) {
+    // Check if item has empty or incorrect judging criteria
+    if (!item.judgingCriteria || item.judgingCriteria.length === 0) {
+      console.log(
+        `Fixing item ${item.itemCode} (${item.category}) - no judging criteria`
+      );
+
+      // Get correct judging criteria for this category
+      let judgingCriteria: string[];
+      if (
+        settings?.categoryJudgingCriteria &&
+        settings.categoryJudgingCriteria[item.category]
+      ) {
+        judgingCriteria = settings.categoryJudgingCriteria[item.category];
+      } else if (
+        settings?.judgingCriteria &&
+        settings.judgingCriteria.length > 0
+      ) {
+        judgingCriteria = settings.judgingCriteria;
+      } else {
+        judgingCriteria = ['Appearance', 'Tenderness', 'Flavor'];
+      }
+
+      // Update the item
+      await DatabaseService.updateItemJudgingCriteria(item.id, judgingCriteria);
+      console.log(
+        `Updated item ${item.itemCode} with criteria: ${judgingCriteria.join(', ')}`
+      );
+    }
+  }
 }
 
 export function downloadPDF(pdfBytes: Uint8Array, filename: string): void {
