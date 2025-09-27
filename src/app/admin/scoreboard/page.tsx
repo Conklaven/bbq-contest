@@ -31,11 +31,12 @@ export default function ScoreboardPage() {
   // Update sorting when view mode changes
   const handleViewModeChange = (mode: 'overall' | 'category') => {
     setViewMode(mode);
-    if (mode === 'category') {
-      setSortBy('average');
+    // Overall always sorts by total (sum of category averages), Category always sorts by average
+    if (mode === 'overall') {
+      setSortBy('total');
       setSortOrder('desc');
     } else {
-      setSortBy('total');
+      setSortBy('average');
       setSortOrder('desc');
     }
   };
@@ -251,15 +252,6 @@ export default function ScoreboardPage() {
     }
   };
 
-  const handleSort = (newSortBy: 'total' | 'average') => {
-    if (sortBy === newSortBy) {
-      setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc');
-    } else {
-      setSortBy(newSortBy);
-      setSortOrder('desc');
-    }
-  };
-
   const getScoreValue = (score: Score) => {
     return Object.values(score.scores).reduce(
       (sum, value) => sum + (value as number),
@@ -349,34 +341,6 @@ export default function ScoreboardPage() {
                 ? 'Team Rankings'
                 : `${selectedCategory} Rankings`}
             </h3>
-            <div className="flex gap-2">
-              <button
-                onClick={() => handleSort('total')}
-                className={`px-3 py-1 rounded text-sm ${
-                  sortBy === 'total'
-                    ? 'bg-blue-100 text-blue-800'
-                    : 'bg-gray-100 text-gray-700'
-                }`}
-              >
-                {viewMode === 'overall'
-                  ? 'Sum of Category Averages'
-                  : 'Total Score'}{' '}
-                {sortBy === 'total' && (sortOrder === 'desc' ? '↓' : '↑')}
-              </button>
-              <button
-                onClick={() => handleSort('average')}
-                className={`px-3 py-1 rounded text-sm ${
-                  sortBy === 'average'
-                    ? 'bg-blue-100 text-blue-800'
-                    : 'bg-gray-100 text-gray-700'
-                }`}
-              >
-                {viewMode === 'overall'
-                  ? 'Avg of Category Averages'
-                  : 'Average Score'}{' '}
-                {sortBy === 'average' && (sortOrder === 'desc' ? '↓' : '↑')}
-              </button>
-            </div>
           </div>
         </div>
         <div className="overflow-x-auto">
@@ -401,13 +365,13 @@ export default function ScoreboardPage() {
                 )}
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
                   {viewMode === 'overall'
-                    ? 'Total Score (Sum of Category Averages)'
+                    ? 'Total Score (Sum of Category Averages) (Sorted by this)'
                     : 'Total Score'}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
                   {viewMode === 'overall'
                     ? 'Average Score (Avg of Category Averages)'
-                    : 'Average Score'}
+                    : 'Average Score (Sorted by this)'}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
                   Scores Count
