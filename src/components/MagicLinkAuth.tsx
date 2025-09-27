@@ -157,6 +157,10 @@ export default function MagicLinkAuth({
             Click the link in your email to sign in. The link will expire in 1
             hour.
           </p>
+          <p className="text-xs text-gray-400 mt-3 px-4">
+            💡 If you don&apos;t see the email within a few moments, please
+            check your spam folder.
+          </p>
         </div>
         <button
           onClick={() => {
