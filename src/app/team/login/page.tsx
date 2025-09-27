@@ -180,6 +180,9 @@ export default function TeamLoginPage() {
           <p className="text-gray-600 mt-2">
             Sign in to access your team dashboard
           </p>
+          <p className="text-sm text-gray-500 mt-3 px-4">
+            💡 Use the team contact email provided when you signed up
+          </p>
         </div>
 
         {/* Login Method Toggle */}
@@ -236,6 +239,10 @@ export default function TeamLoginPage() {
             {success && (
               <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-md">
                 <div className="text-green-600 text-sm">{success}</div>
+                <div className="text-xs text-gray-400 mt-2">
+                  💡 If you don&apos;t see the email within a few moments,
+                  please check your spam folder.
+                </div>
               </div>
             )}
 
