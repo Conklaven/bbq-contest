@@ -564,11 +564,11 @@ export default function ScoreboardPage() {
                         : '0.00';
                     })()}
               </div>
-              <div className="text-sm text-gray-700">
+              {/* <div className="text-sm text-gray-700">
                 {viewMode === 'overall'
                   ? 'Average Team Score'
                   : 'Average Entry Score'}
-              </div>
+              </div> */}
             </div>
           </div>
         </div>
