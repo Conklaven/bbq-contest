@@ -2,6 +2,8 @@
 import { useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
+import { isSignInWithEmailLink } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 
 function AuthHandler() {
   const router = useRouter();
@@ -33,6 +35,22 @@ function AuthHandler() {
     } else if (mode === 'verifyEmail') {
       // Handle email verification if needed
       router.replace('/login?verified=true');
+    } else if (mode === 'signIn' && oobCode) {
+      // Handle magic link sign-in
+      // Check if this is a valid sign-in link
+      if (isSignInWithEmailLink(auth, window.location.href)) {
+        // Redirect to login page with the magic link parameters
+        // The MagicLinkAuth component will handle the actual sign-in
+        const loginUrl = new URL('/login', window.location.origin);
+        // Preserve all the magic link parameters
+        searchParams.forEach((value, key) => {
+          loginUrl.searchParams.set(key, value);
+        });
+        window.location.href = loginUrl.toString();
+      } else {
+        // Invalid magic link, redirect to login
+        router.replace('/login');
+      }
     } else {
       // Unknown mode, redirect to login
       router.replace('/login');
