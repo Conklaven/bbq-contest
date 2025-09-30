@@ -23,6 +23,17 @@ export default function LoginPage() {
   const router = useRouter();
   const { user, claims, loading: authLoading } = useAuth();
 
+  // Auto-select magic link tab if magic link parameters are present
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const hasMagicLinkParams =
+      urlParams.get('mode') === 'signIn' && urlParams.get('oobCode');
+
+    if (hasMagicLinkParams) {
+      setLoginMethod('magic-link');
+    }
+  }, []);
+
   // Redirect if user is already logged in
   useEffect(() => {
     if (user && !authLoading) {
