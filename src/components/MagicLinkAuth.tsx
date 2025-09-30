@@ -69,7 +69,10 @@ export default function MagicLinkAuth({
 
       // Clear the email from storage.
       window.localStorage.removeItem('emailForSignIn');
-      onSuccess?.();
+
+      // Force a page reload to ensure auth state is properly updated
+      // This ensures the redirect logic in the login page runs correctly
+      window.location.reload();
     } catch (err: unknown) {
       const errorMessage =
         err instanceof Error ? err.message : 'Failed to complete sign in';
