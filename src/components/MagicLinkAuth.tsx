@@ -24,6 +24,14 @@ export default function MagicLinkAuth({
   // Check if this is a magic link callback
   const isMagicLinkCallback = isSignInWithEmailLink(auth, window.location.href);
 
+  // Also check for magic link parameters in URL as fallback
+  const urlParams = new URLSearchParams(window.location.search);
+  const hasMagicLinkParams =
+    urlParams.get('mode') === 'signIn' && urlParams.get('oobCode');
+
+  // Use either Firebase detection or URL parameter detection
+  const isMagicLink = isMagicLinkCallback || hasMagicLinkParams;
+
   const actionCodeSettings = {
     // URL you want to redirect back to. The domain (www.example.com) for this
     // URL must be in the authorized domains list in the Firebase Console.
@@ -84,7 +92,7 @@ export default function MagicLinkAuth({
   };
 
   // If this is a magic link callback, handle the sign-in
-  if (isMagicLinkCallback) {
+  if (isMagicLink) {
     const emailForSignIn = window.localStorage.getItem('emailForSignIn');
 
     if (emailForSignIn) {
