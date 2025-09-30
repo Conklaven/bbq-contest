@@ -539,7 +539,7 @@ export default function ScoreboardPage() {
               </div>
               <div className="text-sm text-gray-700">Total Scores</div>
             </div>
-            <div className="text-center">
+            {/* <div className="text-center">
               <div className="text-2xl font-bold text-purple-600">
                 {viewMode === 'overall'
                   ? teamScores.length > 0
@@ -564,12 +564,12 @@ export default function ScoreboardPage() {
                         : '0.00';
                     })()}
               </div>
-              {/* <div className="text-sm text-gray-700">
+              <div className="text-sm text-gray-700">
                 {viewMode === 'overall'
                   ? 'Average Team Score'
                   : 'Average Entry Score'}
-              </div> */}
-            </div>
+              </div>
+            </div> */}
           </div>
         </div>
       </div>
