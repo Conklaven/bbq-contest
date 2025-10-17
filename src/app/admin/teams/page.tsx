@@ -40,8 +40,29 @@ export default function TeamsPage() {
     try {
       if (editingTeam) {
         // Update existing team
-        // Note: You'll need to add updateTeam method to DatabaseService
-        console.log('Update team:', editingTeam.id, formData);
+        const updateData = {
+          name: formData.name,
+          email: formData.email,
+          categories: formData.categories,
+          // Only include password if it's been provided (not empty)
+          ...(formData.password && { password: formData.password }),
+        };
+
+        const response = await fetch(`/api/teams/${editingTeam.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(updateData),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to update team');
+        }
+
+        const result = await response.json();
+        console.log('Team updated successfully:', result);
       } else {
         // Create new team using API route
         const response = await fetch('/api/teams', {
@@ -66,7 +87,10 @@ export default function TeamsPage() {
       loadTeams();
     } catch (error) {
       console.error('Error saving team:', error);
-      alert('Error creating team: ' + (error as Error).message);
+      alert(
+        `Error ${editingTeam ? 'updating' : 'creating'} team: ` +
+          (error as Error).message
+      );
     } finally {
       setSavingTeam(false);
     }
@@ -108,7 +132,7 @@ export default function TeamsPage() {
     setFormData({
       name: team.name,
       email: team.email,
-      password: team.password,
+      password: '', // Don't populate password for security
       categories: team.categories,
     });
     setShowForm(true);
@@ -219,7 +243,12 @@ export default function TeamsPage() {
             <div className="mb-4">
               <div className="flex justify-between items-center mb-2">
                 <label className="block text-sm font-medium text-gray-900">
-                  Password
+                  Password{' '}
+                  {editingTeam && (
+                    <span className="text-gray-500 text-xs">
+                      (leave blank to keep current)
+                    </span>
+                  )}
                 </label>
                 <button
                   type="button"
@@ -238,8 +267,12 @@ export default function TeamsPage() {
                 }
                 className="w-full p-2 border rounded text-gray-900 disabled:bg-gray-100"
                 disabled={savingTeam}
-                required
-                placeholder="Enter password or click 'Generate Random'"
+                required={!editingTeam}
+                placeholder={
+                  editingTeam
+                    ? 'Leave blank to keep current password'
+                    : "Enter password or click 'Generate Random'"
+                }
               />
             </div>
             <div className="mb-4">

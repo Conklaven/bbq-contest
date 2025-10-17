@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { DatabaseService, Team, Score } from '@/lib/db';
+import { DatabaseService, Team, Score, Item } from '@/lib/db';
 
 interface TeamScore {
   team: Team;
@@ -27,6 +27,8 @@ export default function ScoreboardPage() {
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [viewMode, setViewMode] = useState<'overall' | 'category'>('overall');
   const [categories, setCategories] = useState<string[]>([]);
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [items, setItems] = useState<Item[]>([]);
 
   // Update sorting when view mode changes
   const handleViewModeChange = (mode: 'overall' | 'category') => {
@@ -44,19 +46,23 @@ export default function ScoreboardPage() {
   useEffect(() => {
     const loadScoreboard = async () => {
       try {
-        const [teams, scores, items, settings] = await Promise.all([
+        const [teamsData, scores, itemsData, settings] = await Promise.all([
           DatabaseService.getTeams(),
           DatabaseService.getScores(),
           DatabaseService.getItems(),
           DatabaseService.getSettings(),
         ]);
 
+        // Store teams and items for later use
+        setTeams(teamsData);
+        setItems(itemsData);
+
         // Create maps for quick lookup
         const itemTeamMap = new Map<string, string>();
         const itemCategoryMap = new Map<string, string>();
         const itemCodeMap = new Map<string, string>();
 
-        items.forEach(item => {
+        itemsData.forEach(item => {
           itemTeamMap.set(item.id, item.teamId);
           itemCategoryMap.set(item.id, item.category);
           itemCodeMap.set(item.id, item.itemCode);
@@ -114,7 +120,7 @@ export default function ScoreboardPage() {
         // Calculate overall team scores based on category averages
         const teamScoreMap = new Map<string, TeamScore>();
 
-        teams.forEach(team => {
+        teamsData.forEach(team => {
           // Get all category scores for this team
           const teamCategoryScores = Array.from(
             categoryScoreMap.values()
@@ -175,7 +181,7 @@ export default function ScoreboardPage() {
       loadScoreboard();
     });
     return unsubscribe;
-  }, [sortBy, sortOrder]);
+  }, [sortBy, sortOrder, selectedCategory, teams]);
 
   const exportToCSV = () => {
     if (viewMode === 'overall') {
@@ -257,6 +263,35 @@ export default function ScoreboardPage() {
       (sum, value) => sum + (value as number),
       0
     );
+  };
+
+  // Get teams that have no scores for the selected category
+  const getUnscoredTeamsForCategory = (category: string) => {
+    if (!category || !teams.length || !items.length) return [];
+
+    // Get all items for this category
+    const categoryItems = items.filter(item => item.category === category);
+
+    // Get teams that have items in this category
+    const teamsWithItemsInCategory = new Set(
+      categoryItems.map(item => item.teamId)
+    );
+
+    // Get teams that have scores for items in this category
+    const teamsWithScoresInCategory = new Set(
+      categoryScores
+        .filter(cs => cs.category === category)
+        .map(cs => cs.team.id)
+    );
+
+    // Return teams that have items but no scores in this category
+    return teams
+      .filter(
+        team =>
+          teamsWithItemsInCategory.has(team.id) &&
+          !teamsWithScoresInCategory.has(team.id)
+      )
+      .sort((a, b) => a.name.localeCompare(b.name));
   };
 
   if (loading) {
@@ -573,6 +608,78 @@ export default function ScoreboardPage() {
           </div>
         </div>
       </div>
+
+      {/* Unscored Teams Section (only show in category view) */}
+      {viewMode === 'category' && selectedCategory && (
+        <div className="bg-white shadow rounded-lg mt-6">
+          <div className="px-6 py-4 border-b">
+            <h3 className="text-lg font-medium text-gray-900">
+              Teams Not Yet Scored - {selectedCategory}
+            </h3>
+          </div>
+          <div className="p-6">
+            {(() => {
+              const unscoredTeams =
+                getUnscoredTeamsForCategory(selectedCategory);
+              return unscoredTeams.length > 0 ? (
+                <div>
+                  <p className="text-sm text-gray-600 mb-4">
+                    The following teams have items in the {selectedCategory}{' '}
+                    category but have not been scored yet:
+                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {unscoredTeams.map(team => (
+                      <div
+                        key={team.id}
+                        className="bg-red-50 border border-red-200 rounded-lg p-4"
+                      >
+                        <div className="flex items-center">
+                          <div className="flex-shrink-0">
+                            <div className="w-3 h-3 bg-red-400 rounded-full"></div>
+                          </div>
+                          <div className="ml-3">
+                            <p className="text-sm font-medium text-red-900">
+                              {team.name}
+                            </p>
+                            <p className="text-xs text-red-600">
+                              No scores yet
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg
+                      className="w-6 h-6 text-green-600"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M5 13l4 4L19 7"
+                      />
+                    </svg>
+                  </div>
+                  <h4 className="text-lg font-medium text-gray-900 mb-2">
+                    All Teams Scored!
+                  </h4>
+                  <p className="text-sm text-gray-600">
+                    All teams with items in the {selectedCategory} category have
+                    been scored.
+                  </p>
+                </div>
+              );
+            })()}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
