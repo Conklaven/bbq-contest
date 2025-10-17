@@ -1,5 +1,5 @@
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
-import QRCode from 'qrcode';
+import * as QRCode from 'qrcode';
 import { DatabaseService, Team, Item, ContestSettings } from '@/lib/db';
 
 export async function generateQRPackPDF(): Promise<Uint8Array> {
@@ -11,37 +11,35 @@ export async function generateQRPackPDF(): Promise<Uint8Array> {
     // Create items for each team's categories if they don't exist
     await createItemsForTeams(teams);
 
-    // Get updated items (including newly created ones)
-    const items = await DatabaseService.getItems();
-    console.log(`Total items for PDF generation: ${items.length}`);
-
-    // Log each item being processed
-    items.forEach((item, index) => {
-      const team = teams.find(t => t.id === item.teamId);
-      console.log(
-        `Item ${index + 1}: ${item.itemCode} - ${team?.name || 'Unknown'} - ${item.category}`
-      );
-    });
-
     // Create PDF
     const pdfDoc = await PDFDocument.create();
     const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
-    console.log(`Starting PDF generation with ${items.length} items`);
+    // Group items by team - only include items for categories each team is signed up for
+    const itemsByTeam: Record<string, { team: Team; items: Item[] }> = {};
 
-    // Group items by team
-    const itemsByTeam = items.reduce(
-      (acc, item) => {
-        const team = teams.find(t => t.id === item.teamId);
-        if (team) {
-          if (!acc[team.id]) {
-            acc[team.id] = { team, items: [] };
-          }
-          acc[team.id].items.push(item);
-        }
-        return acc;
-      },
-      {} as Record<string, { team: Team; items: Item[] }>
+    for (const team of teams) {
+      console.log(
+        `Processing team: ${team.name} with categories: ${team.categories.join(', ')}`
+      );
+
+      // Get items only for this team's registered categories
+      const teamItems = await DatabaseService.getItemsByTeam(team.id);
+
+      console.log(`Found ${teamItems.length} items for ${team.name}:`);
+      teamItems.forEach((item, index) => {
+        console.log(`  Item ${index + 1}: ${item.itemCode} - ${item.category}`);
+      });
+
+      itemsByTeam[team.id] = { team, items: teamItems };
+    }
+
+    const totalItems = Object.values(itemsByTeam).reduce(
+      (sum, teamData) => sum + teamData.items.length,
+      0
+    );
+    console.log(
+      `Starting PDF generation with ${totalItems} total items across ${Object.keys(itemsByTeam).length} teams`
     );
 
     console.log(`Grouped items by ${Object.keys(itemsByTeam).length} teams`);
@@ -134,7 +132,7 @@ export async function generateQRPackPDF(): Promise<Uint8Array> {
     }
 
     console.log(
-      `PDF generation complete. Total items in PDF: ${items.length}, Total pages: ${pdfDoc.getPageCount()}`
+      `PDF generation complete. Total items in PDF: ${totalItems}, Total pages: ${pdfDoc.getPageCount()}`
     );
     return await pdfDoc.save();
   } catch (error) {
