@@ -190,11 +190,6 @@ export default function TeamDashboard() {
     (sum, category) => sum + category.scores.length,
     0
   );
-  const overallAverage =
-    teamScores.length > 0
-      ? teamScores.reduce((sum, category) => sum + category.averageScore, 0) /
-        teamScores.length
-      : 0;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -222,7 +217,7 @@ export default function TeamDashboard() {
 
       {/* Stats Overview */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           <div className="bg-white rounded-lg shadow p-6">
             <div className="text-2xl font-bold text-blue-600">
               {teamScores.length}
@@ -234,14 +229,6 @@ export default function TeamDashboard() {
               {totalScores}
             </div>
             <div className="text-sm text-gray-700">Total Scores</div>
-          </div>
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="text-2xl font-bold text-purple-600">
-              {settings?.scoresVisible ? overallAverage.toFixed(2) : '••••'}
-            </div>
-            <div className="text-sm text-gray-700">
-              {settings?.scoresVisible ? 'Overall Average' : 'Score Hidden'}
-            </div>
           </div>
         </div>
 
