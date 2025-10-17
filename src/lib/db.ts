@@ -257,12 +257,21 @@ export class DatabaseService {
   }
 
   static async getItemsByTeam(teamId: string): Promise<Item[]> {
+    // First get the team to retrieve their registered categories
+    const team = await this.getTeam(teamId);
+    if (!team) {
+      return [];
+    }
+
     const itemsRef = collection(db, COLLECTIONS.ITEMS).withConverter(
       itemConverter
     );
     const q = query(itemsRef, where('teamId', '==', teamId));
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => doc.data() as Item);
+    const allItems = snapshot.docs.map(doc => doc.data() as Item);
+
+    // Filter items to only include categories the team is signed up for
+    return allItems.filter(item => team.categories.includes(item.category));
   }
 
   static async getItemByCode(itemCode: string): Promise<Item | null> {

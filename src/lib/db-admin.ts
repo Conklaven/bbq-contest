@@ -117,6 +117,17 @@ export class DatabaseServiceAdmin {
     return id;
   }
 
+  static async updateTeam(
+    id: string,
+    team: Partial<Omit<Team, 'id' | 'createdAt'>>
+  ): Promise<void> {
+    const teamRef = this.db.collection(COLLECTIONS.TEAMS).doc(id);
+    await teamRef.update({
+      ...team,
+      updatedAt: new Date(),
+    });
+  }
+
   static async deleteTeam(id: string): Promise<void> {
     const teamRef = this.db.collection(COLLECTIONS.TEAMS).doc(id);
     await teamRef.delete();
@@ -135,15 +146,24 @@ export class DatabaseServiceAdmin {
   }
 
   static async getItemsByTeam(teamId: string): Promise<Item[]> {
+    // First get the team to retrieve their registered categories
+    const team = await this.getTeam(teamId);
+    if (!team) {
+      return [];
+    }
+
     const itemsRef = this.db.collection(COLLECTIONS.ITEMS);
     const q = itemsRef.where('teamId', '==', teamId);
     const snapshot = await q.get();
-    return snapshot.docs.map(doc => ({
+    const allItems = snapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data(),
       createdAt: doc.data().createdAt?.toDate() || new Date(),
       updatedAt: doc.data().updatedAt?.toDate() || new Date(),
     })) as Item[];
+
+    // Filter items to only include categories the team is signed up for
+    return allItems.filter(item => team.categories.includes(item.category));
   }
 
   static async getItemByCode(itemCode: string): Promise<Item | null> {
