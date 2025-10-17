@@ -240,6 +240,14 @@ export default function ScoreForm({ params }: ScoreFormProps) {
                   className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
                   disabled={isSubmitting}
                 />
+                {/* Number labels below slider */}
+                <div className="flex justify-between text-xs text-gray-400 mt-1 px-1">
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => (
+                    <span key={num} className="w-0 flex-grow text-center">
+                      {num}
+                    </span>
+                  ))}
+                </div>
                 <div className="flex justify-between text-sm text-gray-500 mt-1">
                   <span>Poor</span>
                   <span>Excellent</span>
@@ -272,6 +280,33 @@ export default function ScoreForm({ params }: ScoreFormProps) {
       </div>
 
       <style jsx>{`
+        .slider {
+          background: linear-gradient(
+            to right,
+            #e5e7eb 0%,
+            #e5e7eb 10%,
+            #d1d5db 10%,
+            #d1d5db 20%,
+            #e5e7eb 20%,
+            #e5e7eb 30%,
+            #d1d5db 30%,
+            #d1d5db 40%,
+            #e5e7eb 40%,
+            #e5e7eb 50%,
+            #d1d5db 50%,
+            #d1d5db 60%,
+            #e5e7eb 60%,
+            #e5e7eb 70%,
+            #d1d5db 70%,
+            #d1d5db 80%,
+            #e5e7eb 80%,
+            #e5e7eb 90%,
+            #d1d5db 90%,
+            #d1d5db 100%
+          );
+          position: relative;
+        }
+
         .slider::-webkit-slider-thumb {
           appearance: none;
           height: 20px;
@@ -279,6 +314,8 @@ export default function ScoreForm({ params }: ScoreFormProps) {
           border-radius: 50%;
           background: #2563eb;
           cursor: pointer;
+          border: 2px solid white;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
         }
 
         .slider::-moz-range-thumb {
@@ -287,7 +324,18 @@ export default function ScoreForm({ params }: ScoreFormProps) {
           border-radius: 50%;
           background: #2563eb;
           cursor: pointer;
-          border: none;
+          border: 2px solid white;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .slider::-webkit-slider-track {
+          background: transparent;
+        }
+
+        .slider::-moz-range-track {
+          background: transparent;
+          height: 8px;
+          border-radius: 4px;
         }
       `}</style>
     </div>
