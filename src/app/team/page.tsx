@@ -13,6 +13,7 @@ interface TeamScore {
   totalScore: number;
   averageScore: number;
   criteriaScores: Record<string, number>;
+  maxPossibleScore: number;
 }
 
 export default function TeamDashboard() {
@@ -76,6 +77,12 @@ export default function TeamDashboard() {
         );
         const averageScore = scores.length > 0 ? totalScore / scores.length : 0;
 
+        // Calculate maximum possible score
+        // Each criteria can be scored 1-10, so max per criteria is 10
+        const maxScorePerCriteria = 10;
+        const numberOfCriteria = item.judgingCriteria?.length || 0;
+        const maxPossibleScore = numberOfCriteria * maxScorePerCriteria;
+
         // Calculate average scores for each criteria
         const criteriaScores: Record<string, number> = {};
         if (scores.length > 0) {
@@ -97,6 +104,7 @@ export default function TeamDashboard() {
           totalScore,
           averageScore,
           criteriaScores,
+          maxPossibleScore,
         };
       });
 
@@ -279,6 +287,9 @@ export default function TeamDashboard() {
                             </div>
                             <div className="text-sm text-gray-500">
                               Average Score
+                              {categoryScore.maxPossibleScore > 0
+                                ? ` out of ${categoryScore.maxPossibleScore}`
+                                : ''}
                             </div>
                           </>
                         ) : (
