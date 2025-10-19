@@ -53,18 +53,7 @@ export async function generateQRPackPDF(): Promise<Uint8Array> {
       );
 
       const currentPage = pdfDoc.addPage([612, 792]); // US Letter size
-      let yPosition = 750;
-
-      // Add team header
-      currentPage.drawText(`Team: ${team.name}`, {
-        x: 50,
-        y: yPosition,
-        size: 24,
-        font: boldFont,
-        color: rgb(0, 0, 0),
-      });
-
-      yPosition -= 50;
+      const yPosition = 750;
 
       // Add each item for this team
       for (let i = 0; i < teamItems.length; i++) {
@@ -79,8 +68,8 @@ export async function generateQRPackPDF(): Promise<Uint8Array> {
         const gridCol = i % 2;
 
         // Calculate positions for 2x2 grid
-        const qrX = 50 + gridCol * 280; // 50px margin + 280px spacing between columns
-        const qrY = yPosition - gridRow * 300 - 100; // Start 100px below header, 300px between rows
+        const qrX = 30 + gridCol * 280; // 30px margin + 280px spacing between columns
+        const qrY = yPosition - gridRow * 300 - 100; // Start 100px from top (restore original spacing), 300px between rows
         const textX = qrX + 120; // Text starts 120px to the right of QR code
 
         // Generate QR code with full URL
@@ -129,6 +118,15 @@ export async function generateQRPackPDF(): Promise<Uint8Array> {
           `Added item ${i + 1} to ${team.name}'s page at grid position (${gridRow}, ${gridCol})`
         );
       }
+
+      // Add team name at the bottom of the page
+      currentPage.drawText(`Team: ${team.name}`, {
+        x: 30,
+        y: 50,
+        size: 24,
+        font: boldFont,
+        color: rgb(0, 0, 0),
+      });
     }
 
     console.log(
