@@ -68,7 +68,7 @@ export async function generateQRPackPDF(): Promise<Uint8Array> {
         const gridCol = i % 2;
 
         // Calculate positions for 2x2 grid
-        const qrX = 30 + gridCol * 280; // 30px margin + 280px spacing between columns
+        const qrX = 30 + gridCol * 300; // 30px margin + 300px spacing between columns
         const qrY = yPosition - gridRow * 300 - 100; // Start 100px from top (restore original spacing), 300px between rows
         const textX = qrX + 120; // Text starts 120px to the right of QR code
 
