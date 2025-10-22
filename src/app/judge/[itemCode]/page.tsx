@@ -279,6 +279,23 @@ export default function ScoreForm({ params }: ScoreFormProps) {
         </div>
       </div>
 
+      {/* Powered by Magnivents */}
+      <div className="max-w-2xl mx-auto px-4 pb-8">
+        <div className="text-center">
+          <a
+            href="https://magnivents.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 sm:gap-3 text-sm sm:text-lg font-medium text-gray-600 hover:text-gray-800 transition-colors"
+          >
+            <span>Powered by</span>
+            <span className="text-lg sm:text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              Magnivents
+            </span>
+          </a>
+        </div>
+      </div>
+
       <style jsx>{`
         .slider {
           background: linear-gradient(

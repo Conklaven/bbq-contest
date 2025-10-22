@@ -391,6 +391,21 @@ export default function TeamDashboard() {
             </p>
           )}
         </div>
+
+        {/* Powered by Magnivents */}
+        <div className="mt-8 text-center">
+          <a
+            href="https://magnivents.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 sm:gap-3 text-sm sm:text-lg font-medium text-gray-600 hover:text-gray-800 transition-colors"
+          >
+            <span>Powered by</span>
+            <span className="text-lg sm:text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              Magnivents
+            </span>
+          </a>
+        </div>
       </div>
     </div>
   );
