@@ -39,40 +39,51 @@ export default function Home() {
 
   // Show home page for all users (including anonymous judges)
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 p-8">
-      <h1 className="text-4xl font-bold mb-4 text-center text-gray-900">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 p-4 sm:p-8">
+      <div className="mb-4 sm:mb-6">
+        <img
+          src="/2025logo.jpg"
+          alt="ASBEE World Kosher BBQ Contest & Festival 2025"
+          className="max-w-xs sm:max-w-sm w-full h-auto rounded-lg shadow-lg"
+        />
+      </div>
+      <h1 className="text-2xl sm:text-4xl font-bold mb-2 sm:mb-4 text-center text-gray-900">
         Welcome to the ASBEE Kosher BBQ Contest Judging App
       </h1>
-      <p className="text-lg text-gray-900 mb-8 text-center max-w-xl">
-        This is the official platform for managing teams, items, judges, and
-        live scoring for your BBQ contest event.
-      </p>
 
-      <div className="flex flex-col sm:flex-row gap-4 w-full max-w-md">
+      <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 w-full max-w-sm sm:max-w-md mb-4 sm:mb-6">
         <a
           href="/login"
-          className="bg-blue-600 text-white px-6 py-3 rounded-lg text-lg font-semibold hover:bg-blue-700 transition text-center"
+          className="bg-blue-600 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg text-sm sm:text-lg font-semibold hover:bg-blue-700 transition text-center"
         >
           Admin Login
         </a>
         <Link
           href="/judge/signin/"
-          className="bg-green-600 text-white px-6 py-3 rounded-lg text-lg font-semibold hover:bg-green-700 transition-colors text-center"
+          className="bg-green-600 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg text-sm sm:text-lg font-semibold hover:bg-green-700 transition-colors text-center"
         >
           Judge Login
         </Link>
         <Link
           href="/team/login"
-          className="bg-purple-600 text-white px-6 py-3 rounded-lg text-lg font-semibold hover:bg-purple-700 transition-colors text-center"
+          className="bg-purple-600 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg text-sm sm:text-lg font-semibold hover:bg-purple-700 transition-colors text-center"
         >
           Team Login
         </Link>
       </div>
 
-      <div className="mt-8 text-center text-sm text-gray-800">
-        <p>Judges: Enter your name to begin scoring items</p>
-        <p>Teams: Use your email to access your scores</p>
-        <p>Admins: Use your credentials to manage the contest</p>
+      <div className="mt-4 sm:mt-6 text-center">
+        <a
+          href="https://magnivents.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 sm:gap-3 text-sm sm:text-lg font-medium text-gray-600 hover:text-gray-800 transition-colors"
+        >
+          <span>Powered by</span>
+          <span className="text-lg sm:text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+            Magnivents
+          </span>
+        </a>
       </div>
 
       {/* Show current user status if signed in */}
