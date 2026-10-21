@@ -1,7 +1,10 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/AuthContext';
+import { DatabaseService } from '@/lib/db';
+import { auth } from '@/lib/firebase';
+import { signOut } from 'firebase/auth';
 import { Toaster } from 'react-hot-toast';
 
 export default function JudgeDashboard() {
@@ -9,6 +12,30 @@ export default function JudgeDashboard() {
   const router = useRouter();
   const [itemCode, setItemCode] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Redirect if not authenticated or if logged in as a team, or if anonymous without a judge record
+  useEffect(() => {
+    const checkAuth = async () => {
+      if (loading) return;
+
+      if (!user || claims?.isTeam) {
+        router.push('/judge/signin');
+        return;
+      }
+
+      // Anonymous judges must have completed sign-in (have a record in the judges collection)
+      if (user.isAnonymous && !claims?.isAdmin && !claims?.isJudge) {
+        const judge = await DatabaseService.getJudge(user.uid);
+        if (!judge) {
+          await signOut(auth);
+          router.push('/judge/signin');
+          return;
+        }
+      }
+    };
+
+    checkAuth();
+  }, [user, claims, loading, router]);
 
   // Handle manual item code submission
   const handleSubmit = async (e: React.FormEvent) => {

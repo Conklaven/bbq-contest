@@ -4,11 +4,23 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/AuthContext';
 import { signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
+import { DatabaseService } from '@/lib/db';
 import Link from 'next/link';
 
 export default function Home() {
   const router = useRouter();
   const { user, claims, loading } = useAuth();
+
+  // If user is anonymous, ensure they actually completed judge sign-in; otherwise sign them out
+  useEffect(() => {
+    if (!loading && user?.isAnonymous) {
+      DatabaseService.getJudge(user.uid).then(judge => {
+        if (!judge) {
+          signOut(auth);
+        }
+      });
+    }
+  }, [user, loading]);
 
   // Only redirect users with specific admin claims
   useEffect(() => {

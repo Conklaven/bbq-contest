@@ -31,6 +31,15 @@ export default function ScoreForm({ params }: ScoreFormProps) {
       setIsLoading(true);
       setError('');
 
+      // Verify judge registration (anonymous users must have a judge record)
+      if (user.isAnonymous && !claims?.isAdmin && !claims?.isJudge) {
+        const judge = await DatabaseService.getJudge(user.uid);
+        if (!judge) {
+          router.push(`/judge/signin?itemCode=${encodeURIComponent(itemCode)}`);
+          return;
+        }
+      }
+
       const itemData = await DatabaseService.getItemByCode(itemCode);
       if (!itemData) {
         setError('Item not found');
@@ -58,7 +67,14 @@ export default function ScoreForm({ params }: ScoreFormProps) {
     } finally {
       setIsLoading(false);
     }
-  }, [user, claims?.isTeam, itemCode]);
+  }, [
+    user,
+    claims?.isTeam,
+    claims?.isAdmin,
+    claims?.isJudge,
+    itemCode,
+    router,
+  ]);
 
   useEffect(() => {
     // Redirect if not authenticated or if logged in as a team, preserving the item code

@@ -44,6 +44,7 @@ function JudgeSignInForm() {
       const settings = await DatabaseService.getSettings();
 
       if (!settings) {
+        await signOut(auth);
         setError(
           'Contest settings not found. Please contact the administrator.'
         );
@@ -60,6 +61,7 @@ function JudgeSignInForm() {
       );
 
       if (judgePassword !== (settings.judgingPassword || '')) {
+        await signOut(auth);
         setError('Incorrect judging password.');
         return;
       }
@@ -77,6 +79,9 @@ function JudgeSignInForm() {
         router.push('/judge');
       }
     } catch (err) {
+      if (auth.currentUser?.isAnonymous) {
+        await signOut(auth);
+      }
       console.error('Sign-in error:', err);
       setError('Failed to sign in. Please try again.');
     } finally {
