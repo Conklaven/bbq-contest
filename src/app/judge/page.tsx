@@ -5,7 +5,7 @@ import { useAuth } from '@/lib/AuthContext';
 import { Toaster } from 'react-hot-toast';
 
 export default function JudgeDashboard() {
-  const { user, loading } = useAuth();
+  const { user, claims, loading } = useAuth();
   const router = useRouter();
   const [itemCode, setItemCode] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -13,7 +13,7 @@ export default function JudgeDashboard() {
   // Handle manual item code submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!itemCode.trim()) return;
+    if (!itemCode.trim() || claims?.isTeam) return;
 
     setIsSubmitting(true);
     try {
@@ -26,8 +26,8 @@ export default function JudgeDashboard() {
     }
   };
 
-  // Redirect if not authenticated
-  if (!loading && !user) {
+  // Redirect if not authenticated or if logged in as a team
+  if (!loading && (!user || claims?.isTeam)) {
     router.push('/judge/signin');
     return null;
   }

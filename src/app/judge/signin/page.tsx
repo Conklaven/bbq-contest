@@ -1,7 +1,7 @@
 'use client';
 import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { signInAnonymously } from 'firebase/auth';
+import { signInAnonymously, signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { DatabaseService } from '@/lib/db';
 import Link from 'next/link';
@@ -31,6 +31,11 @@ function JudgeSignInForm() {
     setError('');
 
     try {
+      // If currently signed in (e.g. as a team account), sign out first to get a clean judge session
+      if (auth.currentUser) {
+        await signOut(auth);
+      }
+
       // First, sign in anonymously to get authentication
       const userCredential = await signInAnonymously(auth);
       const user = userCredential.user;

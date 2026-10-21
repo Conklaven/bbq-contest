@@ -42,8 +42,8 @@ export default function Home() {
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 p-4 sm:p-8">
       <div className="mb-4 sm:mb-6">
         <img
-          src="/2025logo.jpg"
-          alt="ASBEE World Kosher BBQ Contest & Festival 2025"
+          src="/2026logo.png"
+          alt="ASBEE World Kosher BBQ Contest & Festival 2026"
           className="max-w-xs sm:max-w-sm w-full h-auto rounded-lg shadow-lg"
         />
       </div>

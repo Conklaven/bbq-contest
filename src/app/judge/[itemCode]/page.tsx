@@ -13,7 +13,7 @@ interface ScoreFormProps {
 }
 
 export default function ScoreForm({ params }: ScoreFormProps) {
-  const { user, loading } = useAuth();
+  const { user, claims, loading } = useAuth();
   const router = useRouter();
   const { itemCode } = use(params);
 
@@ -25,7 +25,7 @@ export default function ScoreForm({ params }: ScoreFormProps) {
   const [error, setError] = useState('');
 
   const loadItemAndCheckScore = useCallback(async () => {
-    if (!user || !itemCode) return;
+    if (!user || claims?.isTeam || !itemCode) return;
 
     try {
       setIsLoading(true);
@@ -58,20 +58,20 @@ export default function ScoreForm({ params }: ScoreFormProps) {
     } finally {
       setIsLoading(false);
     }
-  }, [user, itemCode]);
+  }, [user, claims?.isTeam, itemCode]);
 
   useEffect(() => {
-    // Redirect if not authenticated, but preserve the item code
-    if (!loading && !user) {
+    // Redirect if not authenticated or if logged in as a team, preserving the item code
+    if (!loading && (!user || claims?.isTeam)) {
       router.push(`/judge/signin?itemCode=${encodeURIComponent(itemCode)}`);
       return;
     }
 
-    // Load item and check for existing score
-    if (user && itemCode) {
+    // Load item and check for existing score (only for authorized judges)
+    if (user && !claims?.isTeam && itemCode) {
       loadItemAndCheckScore();
     }
-  }, [user, loading, itemCode, router, loadItemAndCheckScore]);
+  }, [user, claims, loading, itemCode, router, loadItemAndCheckScore]);
 
   const handleScoreChange = (criteria: string, value: number) => {
     setScores(prev => ({
@@ -83,7 +83,10 @@ export default function ScoreForm({ params }: ScoreFormProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!user || !item) return;
+    if (!user || !item || claims?.isTeam) {
+      setError('Team accounts are not permitted to submit scores.');
+      return;
+    }
 
     setIsSubmitting(true);
     setError('');
@@ -119,10 +122,12 @@ export default function ScoreForm({ params }: ScoreFormProps) {
   }
 
   // Show loading while redirecting to signin
-  if (!user) {
+  if (!user || claims?.isTeam) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 p-8">
-        <div className="text-lg text-gray-800">Redirecting to login...</div>
+        <div className="text-lg text-gray-800">
+          Redirecting to judge login...
+        </div>
       </div>
     );
   }

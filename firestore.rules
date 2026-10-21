@@ -11,7 +11,7 @@ service cloud.firestore {
     }
     
     function isJudge() {
-      return isAuthenticated() && request.auth.token.isJudge == true;
+      return isAuthenticated() && !isTeam() && (request.auth.token.isJudge == true || exists(/databases/$(database)/documents/judges/$(request.auth.uid)));
     }
     
     function isTeam() {
@@ -37,7 +37,7 @@ service cloud.firestore {
     // Judges collection
     match /judges/{judgeId} {
       allow read: if isAdmin() || (isAuthenticated() && request.auth.uid == judgeId);
-      allow write: if isAdmin() || (isAuthenticated() && request.auth.uid == judgeId);
+      allow write: if isAdmin() || (!isTeam() && isAuthenticated() && request.auth.uid == judgeId);
     }
     
     // Scores collection
@@ -46,8 +46,8 @@ service cloud.firestore {
                    (isAuthenticated() && request.auth.uid == resource.data.judgeId) ||
                    (isTeam() && exists(/databases/$(database)/documents/items/$(resource.data.itemId)) && 
                     get(/databases/$(database)/documents/items/$(resource.data.itemId)).data.teamId == request.auth.token.teamId);
-      allow create: if isAdmin() || (isAuthenticated() && request.auth.uid == request.resource.data.judgeId);
-      allow update: if isAdmin() || (isAuthenticated() && request.auth.uid == resource.data.judgeId);
+      allow create: if !isTeam() && (isAdmin() || (isAuthenticated() && request.auth.uid == request.resource.data.judgeId && isJudge()));
+      allow update: if !isTeam() && (isAdmin() || (isAuthenticated() && request.auth.uid == resource.data.judgeId));
       allow delete: if isAdmin();
     }
     
