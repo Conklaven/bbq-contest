@@ -55,6 +55,24 @@ export async function generateQRPackPDF(): Promise<Uint8Array> {
       const currentPage = pdfDoc.addPage([612, 792]); // US Letter size
       const yPosition = 750;
 
+      const teamLabel = `Team: ${team.name}`;
+      const teamLabelSize = Math.min(
+        12,
+        (552 * 12) / boldFont.widthOfTextAtSize(teamLabel, 12)
+      );
+      const teamLabelWidth = boldFont.widthOfTextAtSize(
+        teamLabel,
+        teamLabelSize
+      );
+
+      currentPage.drawText(teamLabel, {
+        x: (612 - teamLabelWidth) / 2,
+        y: 770,
+        size: teamLabelSize,
+        font: boldFont,
+        color: rgb(0, 0, 0),
+      });
+
       // Add each item for this team
       for (let i = 0; i < teamItems.length; i++) {
         const item = teamItems[i];
@@ -118,15 +136,6 @@ export async function generateQRPackPDF(): Promise<Uint8Array> {
           `Added item ${i + 1} to ${team.name}'s page at grid position (${gridRow}, ${gridCol})`
         );
       }
-
-      // Add team name at the bottom of the page
-      currentPage.drawText(`Team: ${team.name}`, {
-        x: 30,
-        y: 50,
-        size: 24,
-        font: boldFont,
-        color: rgb(0, 0, 0),
-      });
     }
 
     console.log(
